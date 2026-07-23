@@ -12,6 +12,9 @@ node_modules/
 dist/
 coverage/
 
+# ~/.gitignore_global ignores components*/ — this project tracks React components
+!frontend/src/components/
+
 *.db
 *.sqlite3
 .env

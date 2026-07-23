@@ -1,0 +1,259 @@
+openapi: 3.0.3
+info:
+  title: MCP Security Posture Scanner API
+  description: >
+    Connects to an MCP server as a client, enumerates tools/resources/prompts,
+    runs a deterministic rule set, and produces a scored findings report.
+    The scanner only enumerates — it never invokes a target server's tools.
+  version: 1.0.0
+servers:
+  - url: /api
+paths:
+  /scans:
+    post:
+      operationId: createScan
+      summary: Submit a target and start a scan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanCreate'
+      responses:
+        '201':
+          description: Scan accepted and queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scan'
+        '422':
+          description: Validation error (e.g. external target without consent flag)
+    get:
+      operationId: listScans
+      summary: List scans, newest first
+      responses:
+        '200':
+          description: All scans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Scan'
+  /scans/{scan_id}:
+    get:
+      operationId: getScan
+      summary: Scan status
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+      responses:
+        '200':
+          description: Scan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scan'
+        '404':
+          description: Not found
+  /scans/{scan_id}/report:
+    get:
+      operationId: getScanReport
+      summary: Findings report for a completed scan
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+      responses:
+        '200':
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '404':
+          description: Not found
+        '409':
+          description: Scan not finished yet
+  /scans/{scan_id}/diff/{other_id}:
+    get:
+      operationId: diffScans
+      summary: Diff findings between two scans of the same target (drift detection)
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+        - name: other_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Diff
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanDiff'
+        '404':
+          description: Either scan not found
+        '409':
+          description: Scans target different servers or are not finished
+  /health:
+    get:
+      operationId: health
+      summary: Liveness check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+components:
+  parameters:
+    ScanId:
+      name: scan_id
+      in: path
+      required: true
+      schema:
+        type: integer
+  schemas:
+    ScanTargetCreate:
+      type: object
+      required: [name, transport]
+      properties:
+        name:
+          type: string
+          description: Human-friendly label for the target server
+        transport:
+          type: string
+          enum: [stdio, http]
+        command:
+          type: string
+          description: Executable for stdio transport
+        args:
+          type: array
+          items:
+            type: string
+          description: Arguments for stdio transport
+        url:
+          type: string
+          description: URL for http transport (localhost only unless allow_external)
+        allow_external:
+          type: boolean
+          default: false
+          description: >
+            Explicit consent to scan a non-localhost URL. Required for any
+            external target; the consent is logged.
+    ScanTarget:
+      allOf:
+        - $ref: '#/components/schemas/ScanTargetCreate'
+        - type: object
+          required: [id]
+          properties:
+            id:
+              type: integer
+    ScanCreate:
+      type: object
+      required: [target]
+      properties:
+        target:
+          $ref: '#/components/schemas/ScanTargetCreate'
+    Scan:
+      type: object
+      required: [id, status, target, created_at]
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        error:
+          type: string
+          nullable: true
+        target:
+          $ref: '#/components/schemas/ScanTarget'
+        created_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        finding_count:
+          type: integer
+    Finding:
+      type: object
+      required: [id, rule_id, severity, title, description, remediation]
+      properties:
+        id:
+          type: integer
+        rule_id:
+          type: string
+          example: MCP-001
+        severity:
+          type: string
+          enum: [critical, high, medium, low]
+        title:
+          type: string
+        description:
+          type: string
+        remediation:
+          type: string
+        subject:
+          type: string
+          description: The tool/resource/prompt name the finding applies to
+          nullable: true
+    Report:
+      type: object
+      required: [scan, findings, summary]
+      properties:
+        scan:
+          $ref: '#/components/schemas/Scan'
+        findings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Finding'
+        summary:
+          type: object
+          description: Finding counts keyed by severity
+          additionalProperties:
+            type: integer
+    ScanDiff:
+      type: object
+      required: [scan_id, other_id, added, removed, unchanged, drift]
+      properties:
+        scan_id:
+          type: integer
+        other_id:
+          type: integer
+        added:
+          type: array
+          items:
+            $ref: '#/components/schemas/Finding'
+          description: Findings present in scan_id but not other_id
+        removed:
+          type: array
+          items:
+            $ref: '#/components/schemas/Finding'
+          description: Findings present in other_id but not scan_id
+        unchanged:
+          type: array
+          items:
+            $ref: '#/components/schemas/Finding'
+        drift:
+          type: array
+          items:
+            type: object
+            required: [rule_id, subject, detail]
+            properties:
+              rule_id:
+                type: string
+              subject:
+                type: string
+                nullable: true
+              detail:
+                type: string
+          description: >
+            Drift signals (rule MCP-010) — findings that changed severity or
+            disappeared between the two scans of the same target.

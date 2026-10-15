@@ -19,6 +19,16 @@ target (brief Section 2, item 3 — this boundary is permanent).
   tool descriptions to an LLM would reintroduce the exact prompt-injection
   risk this tool exists to detect.
 
+## Decision model (Phase 5)
+
+- The hosted decision model receives only data the scanner produced:
+  finding counts per severity, triggered rule IDs, transport type, and the
+  `allow_external` flag.
+- It **never receives target-server text**: no names, descriptions, schemas,
+  finding text, URLs, commands, or args.
+- It can make a verdict stricter, never less strict. Any Critical finding is
+  always `block`.
+
 ## Target restrictions
 
 - Default targets are localhost or self-hosted fixture servers only.

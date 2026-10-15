@@ -72,3 +72,26 @@ flowchart LR
 
 Target-server metadata is treated as hostile input: parsed by deterministic
 rules, rendered inertly in the UI, never forwarded to any LLM API.
+
+## Decision model (Phase 5, operator-requested)
+
+`GET /api/scans/{id}/verdict` returns `allow`/`review`/`block`, a 0-100
+score, the rule IDs behind it, and its `source`. It runs after the rule
+engine and reads only the stored findings. The rule engine does not change.
+
+```mermaid
+flowchart LR
+    F[(Stored findings)] --> X[Feature extractor<br/>counts per severity, rule IDs,<br/>transport, allow_external]
+    X -- "enum + integer fields only" --> HM[Hosted decision model<br/>DECISION_MODEL_URL]
+    X --> P[Deterministic policy]
+    HM -- "validated Verdict" --> C[Combine: policy floor,<br/>model can only be stricter]
+    P --> C
+    C --> V[Verdict + source]
+```
+
+- **Input boundary:** a typed request model with no free-text fields. Names,
+  descriptions, schemas, finding text, URLs and commands cannot be sent.
+- **Fallback:** if the model is unset, times out, or returns an invalid
+  response, the deterministic policy produces the verdict (`source: policy`).
+- **Policy floor:** any Critical finding is always `block`.
+- Full spec: brief Section 13.

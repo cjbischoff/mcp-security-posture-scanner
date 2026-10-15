@@ -94,6 +94,29 @@ paths:
           description: Either scan not found
         '409':
           description: Scans target different servers or are not finished
+  /scans/{scan_id}/verdict:
+    get:
+      operationId: getScanVerdict
+      summary: Allow/review/block verdict for a completed scan (Phase 5)
+      description: >
+        Produced by the operator's hosted decision model from scanner-derived
+        data only (finding counts per severity, triggered rule IDs, transport,
+        allow_external). Target-server text is never sent to the model. Falls
+        back to a deterministic policy when the model is unset, fails, or
+        returns an invalid response.
+      parameters:
+        - $ref: '#/components/parameters/ScanId'
+      responses:
+        '200':
+          description: Verdict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Verdict'
+        '404':
+          description: Not found
+        '409':
+          description: Scan not finished yet
   /health:
     get:
       operationId: health
@@ -257,3 +280,26 @@ components:
           description: >
             Drift signals (rule MCP-010) — findings that changed severity or
             disappeared between the two scans of the same target.
+    Verdict:
+      type: object
+      required: [scan_id, decision, score, reasons, source]
+      properties:
+        scan_id:
+          type: integer
+        decision:
+          type: string
+          enum: [allow, review, block]
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        reasons:
+          type: array
+          items:
+            type: string
+            example: MCP-001
+          description: Rule IDs that caused the decision
+        source:
+          type: string
+          enum: [model, policy]
+          description: Whether the hosted decision model or the deterministic policy produced the verdict

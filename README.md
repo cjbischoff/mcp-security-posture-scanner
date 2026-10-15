@@ -32,6 +32,7 @@ See `docs/permissions.md`.
 | `docs/architecture.md` | System architecture |
 | `docs/permissions.md` | Enumerate-only safety boundary |
 | `AGENTS.md` | AI-assisted development workflow log |
+| `docs/decisions/` | Decision records (e.g. the Phase 5 decision model) |
 
 ## Repository structure
 
@@ -60,6 +61,7 @@ custom-agent/       Phase 2
 - [ ] **Phase 2 — Agent extension pack** *(blocked: confirm Module 3 completion first)*
 - [ ] **Phase 3 — Security/audit/DevOps hardening:** CodeRabbit artifacts, Semgrep (+ custom `no-llm-on-untrusted-mcp-data` rule), Syft/Grype if time, `/health` `/metrics`, AI data policy
 - [ ] **Phase 4 — Deploy + polish:** cloud deploy, deploy-on-merge workflow, final README/AGENTS.md
+- [ ] **Phase 5 — Decision model** *(operator-requested, after Phase 1):* `GET /api/scans/{id}/verdict` returns allow/review/block + score. The operator's hosted model receives scanner-derived counts and rule IDs only, never target text. Deterministic policy fallback. See brief Section 13.
 
 Do not start Phase 2/3 before Phase 1 tests pass and the open items below are
 resolved.
@@ -74,6 +76,8 @@ resolved.
    requires an explicit decision (consent flag + disclaimer already specified).
 4. **Deployment target** — course expects a public cloud URL (Render/Fly/Railway);
    confirm an approved hosting target before Phase 4.
+5. **Decision model** — confirm the hosted model's endpoint, request/response
+   format, auth, and data retention before Phase 5.
 
 ## Running (Phase 1 onward)
 

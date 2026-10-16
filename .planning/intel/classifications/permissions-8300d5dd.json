@@ -1,0 +1,17 @@
+{
+  "file": "docs/permissions.md",
+  "manifest_type": "DOC",
+  "sha_prefix": "8300d5dd",
+  "confidence": "high",
+  "summary": "Permanent safety boundary document defining what the scanner is allowed to do to a scan target. Covers connection methods, metadata-only read scope (never invoking tools/reading resources/LLM-processing), decision-model isolation, target restrictions, and agent extension pack boundary.",
+  "tags": ["security", "permissions", "safety-boundary", "architecture"],
+  "doc_type": "specification",
+  "audience": "developer",
+  "key_topics": [
+    "read-only enumeration scope",
+    "no tool invocation guarantee",
+    "no LLM ingestion of target metadata",
+    "decision model air-gap",
+    "explicit consent for non-localhost targets"
+  ]
+}

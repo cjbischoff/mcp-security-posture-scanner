@@ -1,0 +1,17 @@
+{
+  "file": "mcp-scanner-project-brief.md",
+  "manifest_type": "PRD",
+  "confidence": "high",
+  "summary": "Comprehensive product requirements document for an MCP Security Posture Scanner — a deterministic, enumerate-only security scanner for MCP servers. Defines scope boundaries, build phases, rule set, data model, API contract, repository structure, rubric mapping, tech stack, open items, non-goals, and an operator-requested decision model extension. Serves as single source of truth for the project.",
+  "key_indicators": [
+    "Section 0 explicitly positions itself as 'single source of truth'",
+    "Defines hard scope boundaries (deterministic engine, enumerate-only, clean-room)",
+    "Phased build plan (Phase 0-5) with dependency ordering",
+    "Rubric-to-deliverable mapping table defining 'done' per category",
+    "Functional spec with data model, API endpoints, and fixed rule set",
+    "Repository structure requirements down to file level",
+    "Open items section lists unresolved questions for human operator"
+  ],
+  "sections": 13,
+  "estimated_pages": 15
+}

@@ -1,0 +1,13 @@
+{
+  "manifest_type": "DOC",
+  "filepath": "docs/architecture.md",
+  "title": "Architecture",
+  "category": "system_design",
+  "confidence": "high",
+  "summary": "System architecture document detailing the MCP scan platform: React+TypeScript frontend, FastAPI backend with layered architecture, SQLite/Postgres database, MCP client for enumerate-only scanning, deterministic rule engine (10 rules, capped), diff/drift detection, trust boundaries (hostile MCP metadata never reaches LLM), and a Phase 5 decision model combining hosted model with deterministic policy floor.",
+  "key_topics": ["frontend", "backend", "database", "MCP client", "rule engine", "scan flow", "diff/drift detection", "trust boundaries", "decision model", "CI/CD", "containerization"],
+  "technical_domains": ["web architecture", "API design", "MCP protocol", "security", "containerization"],
+  "phase_relevance": ["Phase 0", "Phase 3", "Phase 5"],
+  "audience": "developers",
+  "relationships": []
+}

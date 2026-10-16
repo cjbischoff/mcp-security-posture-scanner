@@ -1,0 +1,32 @@
+{
+  "file": "product-spec.md",
+  "manifest_type": "SPEC",
+  "classification": "product_spec",
+  "confidence": "high",
+  "document_title": "MCP Security Posture Scanner",
+  "document_type": "software_product_specification",
+  "sections": [
+    "Problem",
+    "What it does",
+    "Hard constraints",
+    "Users and flows",
+    "Decision model (Phase 5, operator-requested)",
+    "v1 rule set (capped)",
+    "Data model",
+    "API",
+    "Tech stack",
+    "Non-goals",
+    "Future work"
+  ],
+  "key_entities": [
+    "MCP Security Posture Scanner",
+    "ScanTarget",
+    "Scan",
+    "Finding"
+  ],
+  "rule_count": 10,
+  "has_api_contract": true,
+  "has_data_model": true,
+  "phase_gated": true,
+  "summary": "Specification for a deterministic, self-hostable MCP security posture scanner that enumerates server metadata and runs human-written rules to assess risk before wiring servers into AI agents."
+}

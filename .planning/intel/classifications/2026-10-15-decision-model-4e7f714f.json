@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": {
+    "manifest_type": "ADR",
+    "classifier": "gsd-doc-classify",
+    "classified_at": "2026-10-15T12:00:00Z",
+    "source_path": "docs/decisions/2026-10-15-decision-model.md",
+    "confidence": "high"
+  },
+  "classification": {
+    "primary_category": "decision-record",
+    "subcategory": "architecture-decision",
+    "summary": "Add a hosted decision model that produces a per-scan verdict from scanner-derived data only",
+    "scope": "architecture and system design",
+    "document_type": "ADR",
+    "manifest_type": "ADR",
+    "is_adr": true,
+    "confidence": "high",
+    "tags": [
+      "decision-model",
+      "security",
+      "phase-5",
+      "scanner",
+      "hosted-model"
+    ],
+    "key_findings": [
+      "Hosted model produces verdict from scanner-derived counts and rule IDs only",
+      "Deterministic policy is fallback and floor",
+      "Section 2 item 1 constraint forbids feeding target descriptions to LLM",
+      "Typed input (enum and integer fields only) makes it impossible to send target text",
+      "Trade-off: model cannot find risks that rules miss; adds external network dependency"
+    ],
+    "decision_rationale": "Model never sees target text, keeping Section 2 item 1 compliance. Policy floor means model error can only make verdict stricter.",
+    "supersedes": []
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "filepath": "AGENTS.md",
+  "manifest_type": "DOC",
+  "category": "documentation",
+  "confidence": "high",
+  "summary": "Project conventions file — documents AI-assisted development workflow, ground rules, and session log for how AI tooling is used to build this project.",
+  "topics": ["agent-workflow", "development-conventions", "ai-tooling-policy"],
+  "suggested_labels": ["documentation", "workflow", "conventions", "ai-assisted-development"]
+}

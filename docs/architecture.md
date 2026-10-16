@@ -14,7 +14,8 @@ Planned system architecture (Phase 0 — updated as implementation lands).
   - `app/rules/` — deterministic rule engine, one module per rule (capped at
     10 for v1), run over the enumerated snapshot. No LLM involvement.
 - **Database** — SQLite locally, Postgres in prod, selected via
-  `DATABASE_URL`. Alembic migrations.
+  `DATABASE_URL`. Alembic migrations run at container start
+  (`alembic upgrade head`).
 - **Containerization** — Docker Compose: `frontend` (nginx, proxies `/api`),
   `backend` (uvicorn :8000), `db` (Postgres 16).
 - **CI/CD** — GitHub Actions: `ci.yml` lints and runs unit + integration

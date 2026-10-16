@@ -72,6 +72,6 @@ Phase 1 decomposed into 5 sub-plans:
 ### Phase 1 — Technical decisions
 
 1. **Direct JSON-RPC over asyncio subprocess** — rejected `mcp.client.stdio.stdio_client` due to a cancel-scope RuntimeError in mcp SDK 1.30 + anyio 4.15.1 on CPython 3.13. The custom implementation is simpler (no anyio dependency for the client), handles initialize handshake + 3 list methods, and is easier to debug.
-2. **In-memory storage for Plan 1.4** — chose in-memory dict storage over SQLAlchemy for Plan 1.4 to keep the API testable without DB setup. DB integration is deferred to a refactor step (or Plan 1.5 if needed).
+2. **In-memory storage for Plan 1.4 (superseded 2026-10-16)** — chose in-memory dict storage over SQLAlchemy for Plan 1.4 to keep the API testable without DB setup. DB integration is deferred to a refactor step (or Plan 1.5 if needed). Superseded: scans, targets, and findings now persist through `app/repositories/scans.py` (SQLAlchemy + Alembic); targets are keyed by full connection info, not name.
 3. **Word-boundary param matching in MCP-004** — substring matching caused false positives (e.g. "target_url" matched "get"). Split on underscore and match whole words only.
-4. **Async scan execution** — uses `asyncio.create_task` for background scan execution with in-memory state. FastAPI `BackgroundTasks` would work but only for sync tasks; `create_task` is simpler for the async scan flow.
+4. **Async scan execution** — uses `asyncio.create_task` for background scan execution; the task opens its own DB session. FastAPI `BackgroundTasks` would work but only for sync tasks; `create_task` is simpler for the async scan flow.

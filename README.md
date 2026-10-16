@@ -12,7 +12,7 @@ A security scanner that connects to an MCP server as a client, enumerates tools/
 # Full stack
 docker compose up --build
 
-# All tests, one command (backend 92 + frontend 26)
+# All tests, one command (backend 102 + frontend 26)
 make test
 
 # Backend only
@@ -94,8 +94,8 @@ curl http://localhost:8000/api/metrics
 
 | Layer | Count | What |
 |---|---|---|
-| Backend unit tests | 73 | Models, config, health, MCP client, 10 rules (37), consent (6), diff service (5) |
-| Backend integration tests | 13 | MCP client enumerate (3), rule engine (2), scan flow (7) + health |
+| Backend unit tests | 86 | Models, config, DB URL, scan repository, health, MCP client, 10 rules, consent, diff service |
+| Backend integration tests | 16 | MCP client enumerate (3), rule engine (2), scan flow (9), persistence across restart (2) |
 | Frontend unit tests | 26 | API client (8), NewScanPage (5), ScansPage (3), ScanReportPage (5), ScanDiffPage (5) |
 | Smoke test | 1 | Standalone: full scan → report → findings against stub fixture server |
 
@@ -109,6 +109,12 @@ cd frontend && npm test
 # Run smoke test
 cd backend && uv run python scripts/smoke_test.py
 ```
+
+## Persistence
+
+Targets, scans, findings, and the raw enumeration snapshot (used by diff and MCP-010) are stored in the database selected by `DATABASE_URL`: Postgres in Docker Compose, SQLite (`backend/scanner.db`) by default. Bare `postgresql://` / `postgres://` URLs (e.g. Neon, with `?sslmode=require`) are mapped to the psycopg2 driver. The schema is managed by Alembic; the backend container runs `alembic upgrade head` before starting uvicorn. For local runs outside Docker: `cd backend && uv run alembic upgrade head`.
+
+A Postgres volume created before migrations existed (tables but no `alembic_version`) needs a one-time `docker compose run --rm --no-deps backend uv run --no-sync alembic stamp 1689000e03f7`.
 
 ## Containerization
 

@@ -10,7 +10,7 @@ This file is the single source of truth for the project. If you are an LLM or co
 
 - Treat every constraint in Section 2 as non-negotiable. Do not propose work-arounds for them.
 - Use Section 4 as the target repository structure. If the current repo state diverges from it, report the diff before making changes, do not silently restructure.
-- Use Section 9 (rubric mapping table) as the definition of "done" for each area. A feature that isn't traceable to a rubric line in that table is out of scope unless the human operator explicitly asks for it.
+- Use Section 9 (rubric mapping table, updated 2026-10-16 to the real 12-criteria rubric) as the definition of "done" for each area. A feature that isn't traceable to a rubric line in that table is out of scope unless the human operator explicitly asks for it.
 - Section 5 gives the build order. Do not start Phase 2 or 3 work before Phase 1 is functionally complete and passing its own tests. Flag it if asked to jump ahead.
 - Section 11 lists unresolved unknowns. Do not assume answers to these, ask the human operator.
 - If any instruction here conflicts with something the human operator says in a live session, the live instruction wins, but flag the conflict rather than silently overriding this document.
@@ -47,6 +47,11 @@ There is no lightweight, self-hostable tool that lets a developer point at an MC
 ## 3. Course Context
 
 Source rubric is explicitly marked draft for the 2026 cohort; scoring, deadlines, and peer-review mechanics may change before the cohort starts. Re-verify against the live course repository (`DataTalksClub/ai-dev-tools-zoomcamp`) before final submission. Do not assume the rubric in Section 9 is frozen.
+
+**Update 2026-10-16:** Section 9 now holds the real rubric (12 criteria, 24
+points, pass at 10, peer review of 3 projects required). The "rubric
+category 12/13" references below are to the earlier draft; those artifacts
+stay in the repo but are no longer separately graded.
 
 Two graded categories are conditional or newly added relative to earlier course material:
 
@@ -209,25 +214,27 @@ See Phase 3 above. The five required artifact types, restated for clarity:
 
 ## 9. Rubric to Deliverable Mapping
 
-| # | Category | Max pts | What satisfies max | Where it lives |
-|---|---|---|---|---|
-| 1 | Problem Description | 2 | Clear README with problem, functionality, expected behavior | `README.md` |
-| 2 | AI-Assisted Dev Workflow | 2 | Documents prompts/task delegation, context files, manual review, verification | `AGENTS.md` |
-| 3 | Tech & Architecture | 2 | Frontend, backend, DB, containerization, CI/CD roles explained together | `docs/architecture.md` |
-| 4 | Frontend | 3 | Functional, centralized API client, tests on core logic with run instructions | `frontend/` |
-| 5 | API Contract | 2 | OpenAPI spec written first, used as contract | `openapi.yaml` |
-| 6 | Backend | 3 | Well structured, follows spec, tests on core functionality | `backend/` |
-| 7 | Database | 2 | Properly integrated, supports multiple environments, documented | `backend/app/models/`, `alembic/` |
-| 8 | Containerization | 2 | Full system via Docker Compose, no manual steps | `docker-compose.yml` |
-| 9 | Integration Testing | 2 | Clearly separated, covers key workflows, documented | `backend/tests/integration/` |
-| 10 | Deployment | 2 | Deployed to cloud, working URL | deploy target + README link |
-| 11 | CI/CD | 2 | Runs tests and deploys on pass | `.github/workflows/` |
-| 12 | Agent Extension Pack | 2 (conditional on Module 3) | Instructions, workflow, subagent, MCP tool/server, hook/guardrail, permissions notes, all documented | `agent-capabilities/`, `agent-hooks/`, `mcp-server/`, `custom-agent/`, `docs/` |
-| 13 | Security/Audit/DevOps Hardening | 2 | All five artifact types present | `security/`, `ops/` |
-| 14 | Reproducibility | 2 | Clear end-to-end setup/run/test/deploy instructions | `README.md` |
-| — | Peer Review | pass/fail gate + bonus | Minimum 3 peer evaluations completed | course platform, not repo |
+Updated 2026-10-16 to the real course rubric: 12 criteria, 24 points
+maximum, 10 points to pass. The draft 14-category table that was here
+before is replaced.
 
----
+| # | Criterion | Max pts | What we deliver for it | Where it lives |
+|---|---|---|---|---|
+| 1 | Problem Description | 2 | README clearly describes the problem, functionality, and expected behavior | `README.md` (Problem, What it does) |
+| 2 | Product Specification | 2 | Spec plus a publicly accessible task tracker; tasks define acceptance criteria; evidence that agents used the tracker | `product-spec.md`, `openapi.yaml`, GitHub Issues, `docs/task-tracker.md`, commits with `Refs #N` |
+| 3 | Agent Team Specification | 2 | Defines the agent team and the process of how they work together | `docs/agent-team.md`, `.claude/agents/` |
+| 4 | Context Management | 2 | `AGENTS.md` exists and points to modular docs (process, team, etc.) | `AGENTS.md`, `CLAUDE.md`, `docs/`, `.planning/` |
+| 5 | Application | 2 | Working application | `backend/`, `frontend/`, `oncall/` |
+| 6 | Testing | 2 | Tests on core logic, unit and integration separated, one command | `backend/tests/unit/`, `backend/tests/integration/`, `oncall/tests/`, `frontend/src/**/__tests__/`, `make test` |
+| 7 | Containerization | 2 | Full system via Docker Compose, no manual steps | `docker-compose.yml`, `Dockerfile`, service Dockerfiles |
+| 8 | Deployment | 2 | Deployed to the cloud with a working URL | `.github/workflows/deploy.yml`, README Deployment section |
+| 9 | CI/CD | 3 | 1 = CI on every PR; 2 = plus CD auto deploy; 3 = CD to dev plus manual prod | `.github/workflows/ci.yml`, `.github/workflows/deploy.yml` |
+| 10 | Observability | 2 | Traces, metrics, and logs for the user journey, viewable | `ops/observability.md`, `ops/grafana/`, `backend/app/observability.py` |
+| 11 | Alerting on User Impact | 1 | An alert on a user-facing symptom, with a way to trigger it | `ops/alerts.md`, `ops/grafana/alerting.yaml`, `scripts/trigger-alert.sh` |
+| 12 | On-Call Agent | 2 | An agent that responds to the alert and fixes the incident | `oncall/`, `docs/oncall-agent.md`, `ops/runbooks/`, `ops/incidents/` |
+| — | Peer Review | required | Review 3 other projects | course platform, not repo |
+
+Total: 24 points. Pass: 10 points.
 
 ## 10. Tech Stack Summary
 

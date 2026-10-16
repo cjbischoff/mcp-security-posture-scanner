@@ -19,3 +19,9 @@ coverage/
 *.sqlite3
 .env
 .DS_Store
+
+# research scratch output (firecrawl)
+.firecrawl/
+
+# ~/.gitignore_global ignores lockfiles; CI needs this one
+!frontend/package-lock.json

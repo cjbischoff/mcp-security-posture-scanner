@@ -19,7 +19,24 @@ target (brief Section 2, item 3 — this boundary is permanent).
   tool descriptions to an LLM would reintroduce the exact prompt-injection
   risk this tool exists to detect.
 
+## Decision model (Phase 5)
+
+- The hosted decision model receives only data the scanner produced:
+  finding counts per severity, triggered rule IDs, transport type, and the
+  `allow_external` flag.
+- It **never receives target-server text**: no names, descriptions, schemas,
+  finding text, URLs, commands, or args.
+- It can make a verdict stricter, never less strict. Any Critical finding is
+  always `block`.
+
 ## Target restrictions
+
+- **stdio in public mode:** the API accepts only bundled fixture names (for
+  example `vulnerable-demo`) and no extra args. It resolves the name to the
+  fixture server on the server side, so a caller cannot run a command.
+- **stdio in local mode:** any command runs only when
+  `ALLOW_ARBITRARY_STDIO=true`. `docker-compose.yml` sets it for local use and
+  publishes ports on 127.0.0.1 only. Never set it in a deployed environment.
 
 - Default targets are localhost or self-hosted fixture servers only.
 - Any non-localhost target requires an explicit `allow_external` consent

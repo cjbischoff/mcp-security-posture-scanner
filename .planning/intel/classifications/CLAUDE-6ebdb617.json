@@ -1,0 +1,11 @@
+{
+  "filename": "CLAUDE.md",
+  "filepath": "/Users/christopher/Development/_me/ai-dev-tools-zoomcampskill-project/CLAUDE.md",
+  "hash": "6ebdb617542ca86adc63b72a97475415",
+  "classification": "DOC",
+  "confidence": "high",
+  "reasoning": "Project CLAUDE.md file — the AI-assistant instruction file for the MCP Security Posture Scanner project. Contains project overview, constraints, layout, and commands. Serves as a static directive document, not source code or build artifact.",
+  "kind": "config",
+  "summary": "Project CLAUDE.md for MCP Security Posture Scanner (AI Dev Tools Zoomcamp final project). Defines project rules, directory layout, and commands.",
+  "tags": ["config", "project-rules", "ai-instructions"]
+}

@@ -1,0 +1,68 @@
+rules:
+  - id: no-llm-on-untrusted-mcp-data
+    pattern-either:
+      # HTTP requests with snapshot/target/description data in the body
+      - patterns:
+          - pattern-either:
+              - pattern: |
+                  $CLIENT.request(..., json=$BODY, ...)
+              - pattern: |
+                  $CLIENT.post($URL, json=$BODY, ...)
+              - pattern: |
+                  httpx.AsyncClient().post($URL, json=$BODY, ...)
+              - pattern: |
+                  httpx.Client().post($URL, json=$BODY, ...)
+          - metavariable-pattern:
+              metavariable: $BODY
+              pattern-either:
+                - pattern: |
+                    {$SNAPSHOT, ...}
+                - pattern: |
+                    {$SNAPSHOT.tools, ...}
+                - pattern: |
+                    {$SNAPSHOT.resources, ...}
+                - pattern: |
+                    {$SNAPSHOT.prompts, ...}
+              metavariable-comparison:
+                - comparison: |
+                    "description" in str($BODY) or "input_schema" in str($BODY) or "inputSchema" in str($BODY)
+
+      # OpenAI API calls with MCP data
+      - patterns:
+          - pattern: |
+              openai.$FUNC(..., $CONTENT, ...)
+          - metavariable-pattern:
+              metavariable: $CONTENT
+              pattern: |
+                {$DESC, ...}
+          - metavariable-comparison:
+              metavariable: $DESC
+              comparison: |
+                "tool" in str($DESC) or "description" in str($DESC) or "snapshot" in str($DESC)
+
+      # Any function call where a variable named snapshot/description/schema
+      # flows into an HTTP request or LLM API call
+      - patterns:
+          - pattern: |
+              $CLIENT.$METHOD(...)
+          - metavariable-pattern:
+              metavariable: $CLIENT
+              pattern: httpx
+          - focus-metavariable: $METHOD
+
+    message: >
+      Potential data leak: MCP scan metadata (descriptions, schemas, snapshots)
+      may be sent to an external service. The core rule engine must never feed
+      target-server data to an LLM. See docs/permissions.md.
+    severity: ERROR
+    languages:
+      - python
+    metadata:
+      cwe: "CWE-912: Backdoor"
+      references:
+        - https://github.com/DataTalksClub/ai-dev-tools-zoomcamp
+      category: security
+      technology:
+        - mcp
+        - httpx
+        - openai

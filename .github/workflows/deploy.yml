@@ -1,27 +1,78 @@
 name: Deploy
 
-# Deploys on merge to main, only after CI passes.
-# Requires the DEPLOY_HOOK_URL secret (e.g. a Render/Fly deploy hook) to be
-# configured on an APPROVED hosting target. Until it is set, the job is a
-# documented no-op — see README "Deployment" for the policy note.
+# CD: every green CI run on main builds an image tagged with the commit SHA
+# and deploys it to dev automatically. Production deploys only by hand
+# (Run workflow -> environment: prod). Rollback = run this workflow by hand
+# with an earlier SHA as the tag.
 
 on:
   workflow_run:
     workflows: [CI]
     types: [completed]
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [dev, prod]
+        default: prod
+      tag:
+        description: Image tag (commit SHA) to deploy; empty = current main HEAD
+        required: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
-  deploy:
+  build:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success'
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
-      - name: Trigger deploy hook
-        env:
-          DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - id: tag
+        run: echo "tag=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push image
         run: |
-          if [ -z "$DEPLOY_HOOK_URL" ]; then
-            echo "DEPLOY_HOOK_URL secret not configured — skipping deploy."
-            exit 0
-          fi
-          curl -fsS -X POST "$DEPLOY_HOOK_URL"
+          IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          docker build --build-arg GIT_SHA=${{ steps.tag.outputs.tag }} -t "$IMAGE:${{ steps.tag.outputs.tag }}" .
+          docker push "$IMAGE:${{ steps.tag.outputs.tag }}"
+
+  deploy-dev:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to dev
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_DEV }}
+          TAG: ${{ needs.build.outputs.tag }}
+          APP_URL: ${{ vars.DEV_URL }}
+        run: .github/scripts/render-deploy.sh
+
+  deploy-manual:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy ${{ inputs.environment }}
+        env:
+          HOOK: ${{ inputs.environment == 'prod' && secrets.RENDER_DEPLOY_HOOK_PROD || secrets.RENDER_DEPLOY_HOOK_DEV }}
+          TAG: ${{ inputs.tag || github.sha }}
+          APP_URL: ${{ inputs.environment == 'prod' && vars.PROD_URL || vars.DEV_URL }}
+        run: .github/scripts/render-deploy.sh

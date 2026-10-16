@@ -38,8 +38,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Type check
-        run: npx tsc --noEmit
+        run: npx tsc -b --noEmit
       - name: Tests
         run: npm test
       - name: Build
         run: npm run build
+
+  compose-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker images
+        run: docker compose build

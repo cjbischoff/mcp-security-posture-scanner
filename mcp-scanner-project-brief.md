@@ -146,13 +146,18 @@ Peer review is mandatory to receive any project points at all: minimum 3 peer ev
 - Semgrep: run `p/security-audit` and `p/owasp-top-ten` against `backend/` and `frontend/`, commit SARIF to `security/semgrep/`, wire into CI. Write the custom rule `no-llm-on-untrusted-mcp-data.yaml` that fails CI if data returned from the MCP client's enumeration calls flows into any LLM API call in the codebase, this directly enforces the Section 2 constraint.
 - If time permits (see Section 11): Syft to generate SBOMs (CycloneDX) for backend deps, frontend deps, and built images, committed to `security/sbom/`. Grype to consume those SBOMs and produce CVE findings in `security/grype/`, gating CI on Critical/High. If Syft/Grype are cut for time, Semgrep alone satisfies the rubric minimum for this category's scan-artifact requirement.
 - `ops/`: add `/health` and `/metrics` endpoints, capture a sample run's output into `ops/health-sample-output.md`.
-- `security/ai-tool-data-policy.md`: state what was shared with the AI coding assistant during development (code only, no secrets), and what data (if any) the running application sends to a third-party LLM. Given the Section 2 constraint, the honest statement is that the core rule engine sends nothing to an LLM.
+- `security/ai-tool-data-policy.md`: state what was shared with the AI coding assistant during development (code only, no secrets), and what data (if any) the running application sends to a third-party LLM. Given the Section 2 constraint, the honest statement is that the core rule engine sends nothing to an LLM. If Phase 5 ships, also state exactly which scanner-derived fields go to the hosted decision model (Section 13).
 
 ### Phase 4: Deploy and Polish
 - Deploy to Render, Fly.io, or Railway as a working URL.
 - Finalize `.github/workflows/deploy.yml` to deploy on merge to `main` after tests pass.
 - Final pass on `README.md`, `AGENTS.md` (documenting actual AI-assisted development workflow used: prompts, task delegation, context files, manual review steps taken).
 - Verify full reproducibility: a fresh clone should be runnable end to end following only the README.
+
+### Phase 5: Decision Model (operator-requested extension, see Section 13)
+- Not traceable to a rubric line. The human operator requested it explicitly (2026-10-15), per Section 0.
+- Start only after Phase 1 is complete. Do not let it delay Phases 3-4, which are graded.
+- Deliver the deterministic policy fallback first, then the hosted-model client.
 
 ---
 
@@ -242,6 +247,8 @@ See Phase 3 above. The five required artifact types, restated for clarity:
 - **Module 3 completion status:** unconfirmed. Determines whether Phase 2 (Agent Extension Pack, rubric category 12) is in scope at all.
 - **External scan target support:** decide explicitly whether the shipped product supports scanning non-localhost targets with consent flags, or is restricted to fixture/self-hosted servers only. Default to restricted per Section 2 unless there's a specific reason to expand it.
 
+- **Decision model (Section 13):** confirm the hosted model's endpoint, request/response format, auth, data retention terms, and that it is the operator's own model (not employer-owned, per Section 2 item 4).
+
 Do not proceed past Phase 1 without resolving the first two items with the human operator.
 
 ---
@@ -252,3 +259,38 @@ Do not proceed past Phase 1 without resolving the first two items with the human
 - Not a live internet-scanning tool. Default targets are local/fixture only.
 - Not a reimplementation of any employer-internal architecture or proprietary logic. Ruleset and design are clean-room from public sources.
 - The core rule engine is not, and will not become, an LLM-judgment system on untrusted input. This is a permanent constraint, not a v1 limitation to be lifted later.
+
+---
+
+## 13. Decision Model (operator-requested extension)
+
+**Purpose:** answer one question per scan: "Is it safe to connect an agent to this MCP server?" The output is structured data, not prose: a decision (`allow`/`review`/`block`), a score (0-100), and the rule IDs that caused the decision. The operator's own hosted "System 1" decision model (a classifier that returns structured output, not text) produces the verdict. A deterministic policy is the fallback.
+
+**Why this does not violate Section 2 item 1:** the model never sees target-server text. It receives only data that the scanner itself produced. The rule engine stays deterministic and unchanged. The verdict is a separate layer that runs after the rule engine.
+
+**Model input (allowlist, nothing else):**
+- Count of findings per severity
+- The set of triggered rule IDs (from the fixed v1 list)
+- Transport type (`stdio`/`http`) and the `allow_external` flag
+
+**Never sent to the model:** tool/resource/prompt names, descriptions, schemas, finding `subject`/`description`/`title`, target URL, command, or args. All of these are target-derived or can contain target text.
+
+**Enforcement:**
+1. A typed input model with enum and integer fields only, and extra fields forbidden. No free-text field exists, so target text cannot be sent.
+2. The custom Semgrep rule `no-llm-on-untrusted-mcp-data` also covers the decision-model client.
+3. A unit test asserts that the serialized request contains no target-derived string from a fixture scan.
+
+**Safety rules for the output:**
+- Validate the model response against the `Verdict` schema. If it is invalid, times out, or the model is not configured, use the deterministic policy.
+- Policy floor: the model can make a decision stricter, never less strict. Any Critical finding is always `block`.
+- Each verdict records its `source` (`model` or `policy`).
+
+**Deterministic policy (fallback and floor):**
+- Score = 100 − (40 × Critical + 20 × High + 5 × Medium + 1 × Low), minimum 0.
+- Any Critical → `block`. Score below 70 → `review`. Otherwise `allow`.
+
+**Configuration:** `DECISION_MODEL_URL` and `DECISION_MODEL_API_KEY`. If unset, only the policy runs, so a fresh clone works with no model.
+
+**API:** `GET /api/scans/{id}/verdict` (see `openapi.yaml`).
+
+**Scope:** not a rule. It does not count against the Section 2 item 5 rule cap. Record what is sent to the model in `security/ai-tool-data-policy.md`. Decision record: `docs/decisions/2026-10-15-decision-model.md`.

@@ -23,6 +23,10 @@ A security scanner that:
    metadata.
 4. Produces a scored findings report (Critical/High/Medium/Low).
 5. Diffs two scans of the same target over time to catch description drift.
+6. *(Phase 5, operator-requested)* Returns a verdict for each scan:
+   `allow`/`review`/`block`, a 0-100 score, and the rule IDs that caused it.
+   The operator's hosted decision model produces it from the scanner's own
+   findings only. A deterministic policy is the fallback. See brief Section 13.
 
 ## Hard constraints
 
@@ -46,6 +50,25 @@ Developer evaluating an MCP server before adoption:
    remediation.
 4. **Diff scans** — pick two scans of the same target, see added/removed
    findings and drift signals.
+5. **Get verdict** *(Phase 5)* — see allow/review/block, the score, and the
+   reasons. A CI job or agent harness can call the same endpoint before it
+   connects to a new MCP server.
+
+## Decision model (Phase 5, operator-requested)
+
+- **Input (allowlist):** finding count per severity, triggered rule IDs,
+  transport type, `allow_external` flag. Enum and integer fields only.
+- **Never sent:** names, descriptions, schemas, finding text, subject, URL,
+  command, args. The model never sees target-server text, so the
+  deterministic-engine constraint holds.
+- **Output:** `decision`, `score`, `reasons`, `source` (`model` or `policy`).
+- **Fallback and floor:** deterministic policy. Score = 100 − (40·Critical +
+  20·High + 5·Medium + 1·Low), minimum 0. Any Critical → `block`. Score
+  below 70 → `review`. The model can make a verdict stricter, never less
+  strict.
+- **Config:** `DECISION_MODEL_URL`, `DECISION_MODEL_API_KEY`. Unset → policy
+  only.
+- Not a rule. It does not count against the 10-rule cap.
 
 ## v1 rule set (capped)
 
@@ -82,6 +105,7 @@ See `openapi.yaml` (contract-first). Summary:
 - `GET /api/scans/{id}` — status
 - `GET /api/scans/{id}/report` — findings report
 - `GET /api/scans/{id}/diff/{other_id}` — diff/drift between two scans
+- `GET /api/scans/{id}/verdict` — allow/review/block verdict *(Phase 5)*
 - `GET /api/health` — liveness
 
 ## Tech stack
@@ -96,7 +120,8 @@ See `openapi.yaml` (contract-first). Summary:
 - Not a general-purpose vulnerability scanner — MCP posture only.
 - Not a live internet-scanning tool — local/fixture targets by default.
 - The rule engine is not, and will not become, an LLM-judgment system on
-  untrusted input. Permanent constraint.
+  untrusted input. Permanent constraint. The Phase 5 decision model does not
+  change this: it receives scanner-derived counts and rule IDs only.
 
 ## Future work (explicitly out of v1 scope)
 

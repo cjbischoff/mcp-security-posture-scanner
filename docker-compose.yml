@@ -16,7 +16,8 @@ services:
   backend:
     build: ./backend
     environment:
-      DATABASE_URL: postgresql+psycopg://scanner:scanner@db:5432/scanner
+      DATABASE_URL: postgresql+psycopg2://scanner:scanner@db:5432/scanner
+      ALLOW_ARBITRARY_STDIO: "true"  # local only; never set in deployed envs
     depends_on:
       db:
         condition: service_healthy
@@ -26,7 +27,7 @@ services:
       timeout: 3s
       retries: 10
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
 
   frontend:
     build: ./frontend
@@ -34,7 +35,7 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "3000:80"
+      - "127.0.0.1:3000:80"
 
 volumes:
   pgdata:

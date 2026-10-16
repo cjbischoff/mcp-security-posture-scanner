@@ -15,26 +15,37 @@ category 2). It is a running log, updated per phase.
 
 ## Agent team
 
-Defined in `docs/agent-team.md`: orchestrator, classifier, synthesizer,
-roadmapper, planner, checker, builder — each with distinct responsibilities.
-Process: Research → Plan → Approve → Execute → Verify → Review.
+Defined in [`docs/agent-team.md`](docs/agent-team.md): human operator,
+orchestrator (Claude Code main session), builder, auditor, and researcher
+subagents, plus the GSD planning roles used earlier. Reusable subagent
+definitions: [`.claude/agents/`](.claude/agents/). Process: issue ->
+contract and prompt -> builder (TDD) -> commit `Refs #N` -> orchestrator
+verification -> PR + CI -> human merge -> CD.
 
 ## Task tracker
 
-Public task board at `docs/task-tracker.md` — every phase has defined
-acceptance criteria and evidence that agents completed the work.
+Public tracker: [GitHub Issues](https://github.com/cjbischoff/mcp-security-posture-scanner/issues).
+Each issue has an acceptance-criteria checklist; commits reference issues.
+Index with evidence commits: [`docs/task-tracker.md`](docs/task-tracker.md).
 
 ## Modular docs
 
-- `docs/agent-team.md` — agent roles and process
-- `docs/task-tracker.md` — task board with acceptance criteria
-- `docs/architecture.md` — system architecture
-- `docs/permissions.md` — safety boundary
-- `docs/agent-extension-pack.md` — security notes
-- `security/ai-tool-data-policy.md` — data flow documentation
-- `docs/oncall-agent.md` — runtime on-call responder agent (the only
+- [`docs/agent-team.md`](docs/agent-team.md) — agent roles, handoff process, evidence
+- [`.claude/agents/`](.claude/agents/) — builder, auditor, researcher subagent definitions
+- [`docs/task-tracker.md`](docs/task-tracker.md) — tracker pointer, labels, issue to commit map
+- [`docs/architecture.md`](docs/architecture.md) — system architecture
+- [`docs/permissions.md`](docs/permissions.md) — safety boundary
+- [`docs/oncall-agent.md`](docs/oncall-agent.md) — runtime on-call responder agent (the only
   place the application itself may call an LLM; operational data only)
-- `security/pr-audit/review-log.md` — code review log
+- [`ops/observability.md`](ops/observability.md) — traces, logs, metrics in Grafana
+- [`ops/alerts.md`](ops/alerts.md) — `ScanFailureRateHigh` alert
+- [`ops/runbooks/`](ops/runbooks/) — runbooks (scan failure rate)
+- [`docs/decisions/`](docs/decisions/) — decision records
+- [`security/ai-tool-data-policy.md`](security/ai-tool-data-policy.md) — data flow documentation
+- [`docs/agent-extension-pack.md`](docs/agent-extension-pack.md) — security notes
+- [`security/pr-audit/review-log.md`](security/pr-audit/review-log.md) — code review log
+- [`.planning/`](.planning/) — GSD roadmap, requirements, phase plans
+- [`mcp-scanner-project-brief.md`](mcp-scanner-project-brief.md) — single source of truth, rubric map (Section 9)
 
 ## Workflow pattern
 
@@ -43,10 +54,11 @@ acceptance criteria and evidence that agents completed the work.
 2. **Task delegation:** backend and frontend are built by separate agent
    sessions against the shared OpenAPI contract; root-level artifacts
    (compose, CI, docs) are handled in the orchestrating session.
-3. **Manual review:** every agent-produced diff is reviewed by the human
-   operator before commit; commits are conventional-format and GPG-signed.
+3. **Manual review:** the orchestrator checks every subagent diff and reruns
+   the tests before commit; the human operator reviews and merges every PR.
+   Commits are conventional-format and GPG-signed.
 4. **Verification:** work is accepted only when the real commands pass —
-   `uv run pytest`, `npm test`, `npx tsc --noEmit`, `docker compose up`.
+   `make test`, `make lint`, CI on the PR, and `docker compose up` demos.
 
 ## Session log
 
@@ -58,6 +70,7 @@ acceptance criteria and evidence that agents completed the work.
 | 2026-10-16 | 3 | Planned and executed 4 sub-plans: (3.1) Backend Dockerfile (uv + uvicorn); (3.2) Multi-stage frontend Dockerfile (node build → nginx serve) + nginx proxy config; (3.3) CI update: `npm test` script, compose-build job added; (3.4) Custom Semgrep rule `no-llm-on-untrusted-mcp-data`, `/api/metrics` endpoint, ops sample output. | Operator approved containerized security scanning approach. Full verification: `docker compose build backend` + `frontend`, `compose up -d` all 3 services healthy. Semgrep rule verified: 0 findings on clean code, 1 finding on test violation. Dockerfile USER fix applied (Semgrep finding). |
 | 2026-10-16 | 4 | Planned and executed 3 sub-plans: (4.1) Semgrep `p/security-audit` + `p/owasp-top-ten` SARIF results, Syft SBOM (218 components), Grype vuln scan (0 findings) — all via containerized security scanner; (4.2) PR audit log, AI tool data policy; (4.3) Agent/extension security notes, updated README, AGENTS.md, full smoke verification. | Operator requested containerized security tools. Built `security/Dockerfile` with semgrep + syft + grype. Final verification: 112 tests all green (86 backend + 26 frontend), smoke test passes, compose builds, semgrep 0 findings. |
 | 2026-10-16 | oncall | Built the on-call responder agent (`oncall/`): Grafana webhook -> OpenAI-compatible LLM tool loop with a fixed 7-tool allowlist -> deterministic runbook fallback -> verify -> incident report. TDD: tests written first against fakes (httpx MockTransport for backend, Prometheus, and LLM). Built in parallel with the observability agent against agreed contracts (webhook URL, metric names, admin fault API). | Operator fixed the design: provider-agnostic LLM over httpx (no SDK), runbook fallback so a clone with no key still fixes the incident, server-side allowlist, data boundary per brief Section 2 item 1. Verified: 38 oncall tests, ruff clean, and a real Grafana-fired `ScanFailureRateHigh` alert cleared the fault in compose (`ops/incidents/20261016T222020Z-ScanFailureRateHigh-ceb72b.md`). |
+| 2026-10-16 | audit + build | Auditor subagents reviewed repo/spec consistency, CI/scaffold, and rubric scoring; findings became issues #2-#12. Orchestrator fixed public-mode stdio (#4) and CI/`make test` (#5). Builder subagents: persistence (#6, SQLAlchemy repository + Alembic), then observability + alerting (#7, #8) in parallel with the on-call agent (#9) against shared contracts. Orchestrator added SHA-tagged image build, auto dev deploy, and manual prod deploy (#10); researcher subagent compared free hosting. Docs and tracker (#11). | Operator chose hosting and the LLM approach and merges PRs. Orchestrator reran `make test` after each stream: 114 backend + 38 oncall + 26 frontend = 178 passing; CI on PR #13. Hosting URLs pending Render setup. |
 
 ## Prompts and delegation records
 

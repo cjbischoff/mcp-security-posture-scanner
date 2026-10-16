@@ -1,68 +1,48 @@
-# Task Tracker — MCP Security Posture Scanner
+# Task Tracker
 
-Tracked phases with acceptance criteria and evidence of agent execution.
+The task tracker is **GitHub Issues**, public at
+<https://github.com/cjbischoff/mcp-security-posture-scanner/issues>.
+This file is a pointer and an evidence index; the acceptance criteria live
+in the issues.
 
----
+## How tasks are written
 
-## Phase 0: Setup (scaffold, specs, compose skeleton)
+- One issue per work stream, with an **Acceptance criteria** checklist
+  (`- [ ]` items that a command or artifact can prove).
+- Commits reference the issue in the body: `Refs #N` while work is in
+  progress, `Closes #N` on the commit that completes it. Find them with
+  `git log --grep "#"`.
+- The agent that did the work comments on the issue with evidence (test
+  output, trace IDs, incident reports). See [`agent-team.md`](agent-team.md).
 
-| Task | Acceptance criteria | Agent used | Evidence |
+## Labels
+
+| Label | Meaning |
+|---|---|
+| `area:backend`, `area:frontend`, `area:ci-cd`, `area:observability`, `area:oncall`, `area:docs` | Part of the system |
+| `agent:builder` | Built by a builder subagent |
+| `agent:orchestrator` | Done by the orchestrator session |
+| `backlog` | Not scheduled |
+
+## Issues and evidence
+
+"Closed by commit" means a `Closes #N` commit is on `feature/core-scanner`
+(PR [#13](https://github.com/cjbischoff/mcp-security-posture-scanner/pull/13));
+GitHub closes the issue when the PR merges to `main`.
+
+| Issue | Title | Status | Evidence commits |
 |---|---|---|---|
-| Scaffold repo structure | Directories per brief Section 4 exist | Claude (orchestrator) | `frontend/`, `backend/`, `docs/`, `.github/workflows/` created |
-| Write product-spec.md | Describes problem, 10 rules, data model, flows | Claude | `product-spec.md` written |
-| Write openapi.yaml | Spec-first contract with all endpoints | Claude | `openapi.yaml` defines 6 endpoints + schemas |
-| Docker Compose skeleton | Frontend, backend, Postgres defined | Claude | `docker-compose.yml` with 3 services |
-| CI/CD skeletons | `.github/workflows/ci.yml` + `deploy.yml` exist | Claude | CI runs lint+tests, deploy gates on CI |
+| [#2](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/2) | Backend: scan API, enumeration-only MCP client, 10 deterministic rules | Closed | `9b844f6` (PR #1) |
+| [#3](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/3) | Frontend: scan form, scan list, report and diff pages | Closed | `22fecd4` (PR #1) |
+| [#4](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/4) | Security: public mode must not run arbitrary stdio commands | Closed | `a3513bb` |
+| [#5](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/5) | CI: green lint and tests on every PR, one test command | Closed | `a9610a6`, `00c9eb9` |
+| [#6](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/6) | Persistence: scans, targets, findings stored in Postgres | Closed | `36d3453`, `de6d6d8` |
+| [#7](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/7) | Observability: traces, metrics, JSON logs share one trace ID | Closed by commit | `58e4b7c`, `84f7f0a`, `7c86fdc` |
+| [#8](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/8) | Alerting: ScanFailureRateHigh alert and a trigger to fire it | Closed by commit | `58e4b7c`, `84f7f0a`, `7c86fdc` |
+| [#9](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/9) | On-call agent: wakes on the alert and fixes the incident | Closed by commit | `e53b039`, `aeae48c`, `ce6365f` |
+| [#10](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/10) | CD: auto deploy to dev, manual prod, rollback by SHA, public URL | Open (hosting setup pending) | `45923ef`, `668eb91` |
+| [#11](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/11) | Docs: agent team spec, tracker evidence, README matches reality | Closed by commit | see `git log --grep "#11"` |
+| [#12](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/12) | Phase 5: decision-model verdict endpoint | Backlog | `f802f9b` (spec only) |
 
----
-
-## Phase 1: Backend Core
-
-| Task | Acceptance criteria | Agent used | Evidence |
-|---|---|---|---|
-| Plan decomposition | Phase 1 split into 5 sub-plans with test-at-every-level | Claude | `.planning/ROADMAP.md`, `phases/01-backend-core-mcp-client-rule-engine/` |
-| Project scaffold + DB | FastAPI factory, SQLAlchemy models (ScanTarget, Scan, Finding), Alembic, /api/health | Claude | 16 tests on models+config+health pass |
-| MCP enumeration client | Connect via stdio, enumerate tools/resources/prompts, typed MCPSnapshot | Claude | Direct JSON-RPC over subprocess (bypassed buggy SDK client) |
-| Deterministic rule engine | 10 rule modules (MCP-001..010), orchestrator, registry | Claude | 37 rule unit tests + 2 integration tests pass |
-| Scan/report/diff API | POST /scans, GET /scans/{id}/report, GET /scans/{id}/diff/{other_id}, consent enforcement | Claude | 5 API endpoints; 18 tests (11 unit + 7 integration) |
-| Docs + smoke test | README, AGENTS.md, smoke_test.py | Claude | 86 backend tests green; smoke test passes |
-
----
-
-## Phase 2: Frontend
-
-| Task | Acceptance criteria | Agent used | Evidence |
-|---|---|---|---|
-| Vite scaffold + API client | Vite+React+TS, centralized API client (6 endpoint methods), MSW mocks | Claude | 8 API client tests pass |
-| Scan form + list page | NewScanPage (name, transport, command/args/URL, consent toggle), ScansPage (list + auto-poll) | Claude | 8 RTL tests pass |
-| Report + diff pages | ScanReportPage (severity badges), ScanDiffPage (added/removed/unchanged/drift) | Claude | 10 RTL tests pass |
-
----
-
-## Phase 3: Containerization + CI
-
-| Task | Acceptance criteria | Agent used | Evidence |
-|---|---|---|---|
-| Backend Dockerfile | uv-based image, uvicorn, non-root user | Claude | Builds; runs 86 tests in container |
-| Frontend Dockerfile + nginx | Multi-stage build, nginx proxy /api/ to backend | Claude | Builds; all 3 compose services healthy |
-| CI pipeline update | `npm test` script, compose-build job in CI yml | Claude | CI yml has 3 jobs (backend, frontend, compose-build) |
-| Semgrep custom rule + /metrics | Custom rule passes on clean code, flags violations | Claude | 0 findings on codebase; 1 finding on test violation |
-
----
-
-## Phase 4: Security + DevOps
-
-| Task | Acceptance criteria | Agent used | Evidence |
-|---|---|---|---|
-| Containerized security scanner | Dockerfile with semgrep + syft + grype | Claude | `security/Dockerfile` built; all 3 tools work |
-| SBOM + Grype scan | 218 components, 0 vulnerabilities | Claude | `security/sbom/backend-sbom.cdx.json`, `security/grype/backend-vulns.json` |
-| PR audit log | Documents review methodology + session history | Claude | `security/pr-audit/review-log.md` |
-| AI tool data policy | States dev-time + runtime data flows accurately | Claude | `security/ai-tool-data-policy.md` |
-| Agent/extension notes | Explains deterministic engine rationale | Claude | `docs/agent-extension-pack.md` |
-| Full smoke | 86 backend + 26 frontend tests, compose build, semgrep all green | Claude | All verified passing |
-
----
-
-## Phase 5: Decision Model (not started)
-
-Blocks on operator providing hosted model endpoint, auth, and data retention details.
+Earlier phase plans (before the move to GitHub Issues) are in
+[`.planning/`](../.planning/).

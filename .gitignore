@@ -25,3 +25,7 @@ coverage/
 
 # ~/.gitignore_global ignores lockfiles; CI needs this one
 !frontend/package-lock.json
+
+# on-call incident reports (one sample is force-added)
+ops/incidents/*
+!ops/incidents/.gitkeep

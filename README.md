@@ -34,6 +34,7 @@ cd backend && uv run python scripts/smoke_test.py
 | `docs/agent-extension-pack.md` | Deterministic engine design rationale and security boundary enforcement |
 | `docs/architecture.md` | System architecture with Mermaid flow diagrams |
 | `docs/permissions.md` | Enumerate-only safety boundary |
+| `docs/oncall-agent.md` | On-call responder agent: flow, tools, data boundary, demo |
 | `docs/decisions/` | Decision records (ADR-001: Phase 5 decision model) |
 | `.planning/` | Planning artifacts (PROJECT.md, REQUIREMENTS.md, ROADMAP.md, STATE.md) |
 | `AGENTS.md` | AI-assisted development workflow log |
@@ -104,6 +105,31 @@ scripts/trigger-alert.sh --off
 
 Without `OTEL_EXPORTER_OTLP_ENDPOINT` (tests, the Render deploy) nothing is
 exported and only the JSON logs are written.
+
+## On-call agent
+
+The `oncall` service (`oncall/`) is the responder for the `ScanFailureRateHigh`
+alert. Grafana posts the alert to `http://oncall:8080/alert`; the agent reads
+the fault flags, health, and failure ratio, clears the injected fault, waits,
+verifies, and writes an incident report to `ops/incidents/<id>.md` and `.json`.
+
+- **LLM optional:** any OpenAI-compatible provider via `LLM_BASE_URL`,
+  `LLM_API_KEY`, `LLM_MODEL`. With no key, or on any invalid tool call or
+  provider error, a deterministic runbook does the same fix.
+- **Fixed tool allowlist:** the model picks from 7 server-side tools with
+  enumerated arguments; it cannot write PromQL, URLs, or new tools.
+- **Data boundary:** the agent sees only alert fields, metric numbers, fault
+  flag names, and health. It has no access to scan targets or findings; a test
+  and a Semgrep rule enforce this.
+
+```bash
+docker compose up --build -d backend db lgtm oncall
+scripts/trigger-alert.sh      # or see docs/oncall-agent.md for a manual payload
+ls ops/incidents/
+cd oncall && uv run pytest    # 38 tests
+```
+
+Details: `docs/oncall-agent.md`. Runbook: `ops/runbooks/scan-failure-rate.md`.
 
 ## Test coverage
 

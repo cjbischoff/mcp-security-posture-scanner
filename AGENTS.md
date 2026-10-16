@@ -32,6 +32,8 @@ acceptance criteria and evidence that agents completed the work.
 - `docs/permissions.md` — safety boundary
 - `docs/agent-extension-pack.md` — security notes
 - `security/ai-tool-data-policy.md` — data flow documentation
+- `docs/oncall-agent.md` — runtime on-call responder agent (the only
+  place the application itself may call an LLM; operational data only)
 - `security/pr-audit/review-log.md` — code review log
 
 ## Workflow pattern
@@ -55,6 +57,7 @@ acceptance criteria and evidence that agents completed the work.
 | 2026-10-16 | 2 | Planned and executed 3 sub-plans: (2.1) Vite+React+TS scaffold, centralized API client (6 endpoints), MSW mock handlers, Vitest+RTL config, 8 API client tests; (2.2) NewScanPage form (name, transport, command/args/URL, consent toggle), ScansPage list with auto-polling, 8 RTL tests; (2.3) ScanReportPage (severity badges, findings, remediation), ScanDiffPage (added/removed/unchanged/drift), 10 RTL tests. | Operator approved 3-plan decomposition. Full verification: `cd frontend && npm test` (26/26), `npx tsc --noEmit` clean, `cd backend && uv run pytest -v` (86/86). Key correction: test files excluded from build tsconfig to fix production build. |
 | 2026-10-16 | 3 | Planned and executed 4 sub-plans: (3.1) Backend Dockerfile (uv + uvicorn); (3.2) Multi-stage frontend Dockerfile (node build → nginx serve) + nginx proxy config; (3.3) CI update: `npm test` script, compose-build job added; (3.4) Custom Semgrep rule `no-llm-on-untrusted-mcp-data`, `/api/metrics` endpoint, ops sample output. | Operator approved containerized security scanning approach. Full verification: `docker compose build backend` + `frontend`, `compose up -d` all 3 services healthy. Semgrep rule verified: 0 findings on clean code, 1 finding on test violation. Dockerfile USER fix applied (Semgrep finding). |
 | 2026-10-16 | 4 | Planned and executed 3 sub-plans: (4.1) Semgrep `p/security-audit` + `p/owasp-top-ten` SARIF results, Syft SBOM (218 components), Grype vuln scan (0 findings) — all via containerized security scanner; (4.2) PR audit log, AI tool data policy; (4.3) Agent/extension security notes, updated README, AGENTS.md, full smoke verification. | Operator requested containerized security tools. Built `security/Dockerfile` with semgrep + syft + grype. Final verification: 112 tests all green (86 backend + 26 frontend), smoke test passes, compose builds, semgrep 0 findings. |
+| 2026-10-16 | oncall | Built the on-call responder agent (`oncall/`): Grafana webhook -> OpenAI-compatible LLM tool loop with a fixed 7-tool allowlist -> deterministic runbook fallback -> verify -> incident report. TDD: tests written first against fakes (httpx MockTransport for backend, Prometheus, and LLM). Built in parallel with the observability agent against agreed contracts (webhook URL, metric names, admin fault API). | Operator fixed the design: provider-agnostic LLM over httpx (no SDK), runbook fallback so a clone with no key still fixes the incident, server-side allowlist, data boundary per brief Section 2 item 1. Verified: 38 oncall tests, ruff clean, and a real Grafana-fired `ScanFailureRateHigh` alert cleared the fault in compose (`ops/incidents/20261016T222020Z-ScanFailureRateHigh-ceb72b.md`). |
 
 ## Prompts and delegation records
 

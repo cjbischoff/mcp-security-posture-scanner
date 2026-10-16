@@ -71,6 +71,35 @@ out, and `tests/unit/test_telemetry.py` checks this. See
 
 ---
 
+## Runtime — On-call Agent (optional LLM)
+
+The on-call agent (`oncall/`) can use an LLM provider the operator chooses
+(`LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`; any OpenAI-compatible API). If
+these are unset, nothing is sent and a deterministic runbook runs.
+
+**Sent to the provider:**
+- A fixed system prompt
+- The alert, reduced to: alert name, status, severity, service label, start
+  time, numeric alert values, and the alert summary (our own Grafana rule
+  text, cut to 200 characters)
+- Tool results: metric numbers (no labels), names of active fault flags,
+  backend health status/version/HTTP code, and action results (HTTP codes)
+
+**Never sent:**
+- Tool/resource/prompt names, descriptions, or schemas of any scan target
+- Scan target names, URLs, commands, or args
+- Finding text, scan errors, or log lines (the agent does not read Loki)
+- Grafana URLs, fingerprints, or labels other than the ones above
+- Secrets (admin token, GitHub token, deploy hook)
+
+The agent has no tool that reads scans, targets, or findings, and every tool
+returns a small typed summary instead of a raw response. Enforced by
+`oncall/tests/test_agent.py::test_llm_never_sees_target_data` and the Semgrep
+rule `oncall-no-scanner-target-data-import` (no backend or MCP SDK imports in
+`oncall/`). Details: `docs/oncall-agent.md`.
+
+---
+
 ## Third-Party Services
 
 | Service | Purpose | Data shared |

@@ -2,7 +2,6 @@
 Rule orchestrator — iterates all registered rules and collects findings.
 """
 from app.mcp_client.models import MCPSnapshot
-from app.rules import Rule, finding
 
 
 def run_all_rules(snapshot: MCPSnapshot) -> list[dict]:

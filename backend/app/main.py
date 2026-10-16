@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.config import Settings
 from app.database import Base
-from app import models  # noqa: register models
+from app import models  # noqa: F401 -- registers models on Base.metadata
 from app.routers import router as api_router
 from app.observability import setup_observability
 from app.metrics import setup_metrics, metrics_middleware

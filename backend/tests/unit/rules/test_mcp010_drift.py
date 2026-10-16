@@ -1,6 +1,6 @@
 """Tests for MCP-010: Drift detection (diff-only)."""
 from app.rules.mcp010_drift import MCP010DriftRule
-from app.mcp_client.models import MCPTool, MCPResource, MCPPrompt, MCPSnapshot
+from app.mcp_client.models import MCPTool, MCPSnapshot
 
 
 class TestMCP010Drift:

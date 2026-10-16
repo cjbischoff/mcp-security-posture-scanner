@@ -4,9 +4,8 @@ Stub MCP server for integration testing.
 Exposes tools/resources/prompts with known-vulnerable patterns that the
 deterministic rule engine in Plan 1.3 will detect.
 """
-import asyncio
 
-from mcp.server import Server, NotificationOptions
+from mcp.server import Server
 from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 from mcp.types import (

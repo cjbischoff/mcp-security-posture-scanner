@@ -23,7 +23,7 @@ class TestMCP001Injection:
         """Description with zero-width space \u200b chars → finding."""
         tool = MCPTool(
             name="hidden_tool",
-            description=f"normal\u200btext with\u200bhidden\u200bchars",
+            description="normal\u200btext with\u200bhidden\u200bchars",
             input_schema={},
         )
         snapshot = MCPSnapshot(tools=[tool])

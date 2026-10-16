@@ -4,7 +4,7 @@ Base rule class and finding model for the deterministic rule engine.
 All rules inherit from Rule and implement check(snapshot) -> list[dict].
 Each finding dict matches the Finding DB model fields.
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from app.mcp_client.models import MCPSnapshot

@@ -4,7 +4,7 @@ MCP-010: Drift detection (diff-only).
 Compares two snapshots' findings, flagging findings that changed severity
 or disappeared without a corresponding description change.
 """
-from app.mcp_client.models import MCPSnapshot, MCPTool, MCPResource, MCPPrompt
+from app.mcp_client.models import MCPSnapshot
 from app.rules import Rule, RuleMetadata, finding
 
 

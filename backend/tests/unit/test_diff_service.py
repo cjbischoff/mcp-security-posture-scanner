@@ -1,7 +1,6 @@
 """
 Tests for the diff service.
 """
-import pytest
 from app.services.diff_service import compute_diff
 
 

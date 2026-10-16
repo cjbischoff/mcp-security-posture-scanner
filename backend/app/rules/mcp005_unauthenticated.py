@@ -4,7 +4,7 @@ MCP-005: Unauthenticated HTTP transport.
 Flags HTTP transport with no auth scheme in server info.
 """
 from app.mcp_client.models import MCPSnapshot
-from app.rules import Rule, RuleMetadata, finding
+from app.rules import Rule, RuleMetadata
 
 
 class MCP005UnauthenticatedRule(Rule):

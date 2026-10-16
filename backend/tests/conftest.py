@@ -15,7 +15,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from app.database import Base
 from app.models.scan_target import ScanTarget
 from app.models.scan import Scan
-from app.models.finding import Finding  # noqa: ensure model registered
+from app.models.finding import Finding  # noqa: F401 -- registers model
 
 
 @pytest.fixture(scope="function")

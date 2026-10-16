@@ -1,6 +1,4 @@
-import pytest
 from datetime import datetime, timezone
-from sqlalchemy import select
 from app.models.scan_target import ScanTarget
 from app.models.scan import Scan, ScanStatus
 from app.models.finding import Finding, FindingSeverity, FindingSeverity as FS
@@ -81,7 +79,6 @@ class TestScan:
 
     def test_finished_at_set(self, db_session, scan):
         """finished_at is set when scan completes."""
-        from datetime import datetime, timezone
 
         scan.status = ScanStatus.COMPLETED
         scan.finished_at = datetime.now(timezone.utc)

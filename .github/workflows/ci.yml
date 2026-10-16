@@ -38,7 +38,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Type check
-        run: npx tsc --noEmit
+        run: npx tsc -b --noEmit
       - name: Tests
         run: npm test
       - name: Build

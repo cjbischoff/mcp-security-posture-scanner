@@ -1,7 +1,6 @@
 """
 Unit tests for MCP client — mock the SDK transport layer.
 """
-from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from app.mcp_client.models import MCPSnapshot, MCPTool, MCPResource, MCPPrompt, ToolAnnotations
 from app.mcp_client.client import MCPClient, MCPClientError

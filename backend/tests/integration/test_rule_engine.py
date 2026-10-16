@@ -6,7 +6,6 @@ and verifies known-vulnerable patterns are detected.
 """
 import sys
 import pytest
-import anyio
 from pathlib import Path
 
 FIXTURE_PATH = Path(__file__).resolve().parent.parent / "fixtures" / "stub_mcp_server.py"

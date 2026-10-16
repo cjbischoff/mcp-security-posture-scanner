@@ -12,7 +12,10 @@ A security scanner that connects to an MCP server as a client, enumerates tools/
 # Full stack
 docker compose up --build
 
-# Backend tests (86)
+# All tests, one command (backend 92 + frontend 26)
+make test
+
+# Backend only
 cd backend && uv sync && uv run pytest -v
 
 # Frontend tests (26)
@@ -50,7 +53,7 @@ cd backend && uv run python scripts/smoke_test.py
 | GET | `/api/scans/{id}/diff/{other_id}` | Diff findings between two scans of the same target | ✅ |
 
 **Target types:**
-- **stdio:** provide `command` + optional `args`
+- **stdio:** in public mode, `command` must be a bundled fixture name (`vulnerable-demo`) with no `args`. Any command runs only when `ALLOW_ARBITRARY_STDIO=true` (set in `docker-compose.yml` for local use; never set it in a deployed environment).
 - **HTTP:** provide `url`. Non-localhost URLs require `allow_external: true`
 
 ## v1 rule set (10 deterministic rules)

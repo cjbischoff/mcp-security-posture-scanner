@@ -4,7 +4,7 @@ MCP-004: Read capability + network/write capability pairing (confused-deputy).
 Signals if any tool has read-like characteristics and another has write-like
 characteristics, indicating confused-deputy risk when both are present.
 """
-from app.mcp_client.models import MCPSnapshot, MCPTool
+from app.mcp_client.models import MCPSnapshot
 from app.rules import Rule, RuleMetadata, finding
 
 # Heuristics: patterns commonly associated with read vs write capabilities

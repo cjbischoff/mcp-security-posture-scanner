@@ -4,7 +4,6 @@ MCP-009: Prompt-injection patterns in resource/prompt content descriptions.
 Same injection patterns as MCP-001 but applied to resource descriptions
 and prompt descriptions.
 """
-import re
 from app.mcp_client.models import MCPSnapshot
 from app.rules import Rule, RuleMetadata, finding, mcp001_injection
 

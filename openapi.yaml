@@ -140,6 +140,36 @@ paths:
                     nullable: true
                     pattern: '^[0-9a-f]{32}$'
                     description: Full W3C trace ID of this request, to look it up in Tempo
+  /metrics:
+    get:
+      operationId: metrics
+      summary: In-process JSON metrics snapshot
+      description: >
+        Scan, finding, and rule totals plus request counts and scan durations.
+        The OpenTelemetry metrics (scanner_scans_total etc.) are exported over
+        OTLP separately when OTEL_EXPORTER_OTLP_ENDPOINT is set.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scan_count_total:
+                    type: integer
+                  finding_count_total:
+                    type: integer
+                  rule_count_total:
+                    type: integer
+                  request_counts:
+                    type: object
+                    additionalProperties: true
+                  scan_duration:
+                    type: object
+                    additionalProperties: true
+                  finding_avg_per_scan:
+                    type: number
   /admin/faults:
     get:
       operationId: getFaults

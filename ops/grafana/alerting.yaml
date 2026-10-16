@@ -1,0 +1,65 @@
+# Grafana unified alerting, file-provisioned into the lgtm container.
+# Rule, threshold, and rationale: ops/alerts.md
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: oncall-webhook
+    receivers:
+      - uid: oncall-webhook
+        type: webhook
+        settings:
+          url: http://oncall:8080/alert
+          httpMethod: POST
+
+policies:
+  - orgId: 1
+    receiver: oncall-webhook
+    group_by: [alertname, service]
+    group_wait: 10s
+    group_interval: 1m
+    repeat_interval: 1h
+
+groups:
+  - orgId: 1
+    name: scanner-user-impact
+    folder: Scanner
+    interval: 30s
+    rules:
+      - uid: scan-failure-rate-high
+        title: ScanFailureRateHigh
+        condition: B
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          service: scanner-backend
+          severity: page
+        annotations:
+          summary: More than half of scans failed in the last 5 minutes
+          description: >-
+            Failed scan ratio is {{ humanizePercentage $values.A.Value }} over 5m
+            (at least 3 scans). Users are getting failed reports instead of findings.
+          runbook_url: ops/alerts.md
+          __dashboardUid__: scanner-scan-journey
+          __panelId__: "2"
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              # Failed fraction, only when at least 3 scans finished in 5m
+              expr: >-
+                (sum(increase(scanner_scans_total{status="failed"}[5m]))
+                / sum(increase(scanner_scans_total[5m])))
+                and on() (sum(increase(scanner_scans_total[5m])) >= 3)
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {type: gt, params: [0.5]}

@@ -18,9 +18,15 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://scanner:scanner@db:5432/scanner
       ALLOW_ARBITRARY_STDIO: "true"  # local only; never set in deployed envs
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://lgtm:4318
+      OTEL_SERVICE_NAME: scanner-backend
+      OTEL_METRIC_EXPORT_INTERVAL: "10000"  # ms; short so alerts fire quickly in a demo
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-local-admin-token}  # local default; see .env.example
     depends_on:
       db:
         condition: service_healthy
+      lgtm:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://localhost:8000/api/health')\""]
       interval: 5s
@@ -37,5 +43,17 @@ services:
     ports:
       - "127.0.0.1:3000:80"
 
+  lgtm:
+    # Grafana + OTel collector + Tempo (traces) + Loki (logs) + Prometheus (metrics)
+    image: grafana/otel-lgtm:0.36.0
+    volumes:
+      - lgtmdata:/data
+      - ./ops/grafana/alerting.yaml:/otel-lgtm/grafana/conf/provisioning/alerting/scanner.yaml:ro
+      - ./ops/grafana/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/scanner.yaml:ro
+      - ./ops/grafana/scanner-dashboard.json:/otel-lgtm/scanner-dashboard.json:ro
+    ports:
+      - "127.0.0.1:3001:3000"  # Grafana UI; OTLP 4317/4318 stay on the compose network
+
 volumes:
   pgdata:
+  lgtmdata:

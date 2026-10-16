@@ -16,7 +16,7 @@ services:
   backend:
     build: ./backend
     environment:
-      DATABASE_URL: postgresql+psycopg://scanner:scanner@db:5432/scanner
+      DATABASE_URL: postgresql+psycopg2://scanner:scanner@db:5432/scanner
     depends_on:
       db:
         condition: service_healthy

@@ -68,3 +68,28 @@ def scan(db_session, scan_target):
     db_session.add(s)
     db_session.commit()
     return s
+
+
+@pytest.fixture(scope="session")
+def _span_exporter():
+    """Attach one in-memory exporter to the app's tracer provider."""
+    from opentelemetry import trace
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    import app.main  # noqa: F401 -- installs the tracer provider
+
+    exporter = InMemorySpanExporter()
+    trace.get_tracer_provider().add_span_processor(SimpleSpanProcessor(exporter))
+    return exporter
+
+
+@pytest.fixture
+def spans(_span_exporter):
+    """Finished spans recorded during one test.
+
+    Returns:
+        The in-memory span exporter, cleared before the test.
+    """
+    _span_exporter.clear()
+    return _span_exporter

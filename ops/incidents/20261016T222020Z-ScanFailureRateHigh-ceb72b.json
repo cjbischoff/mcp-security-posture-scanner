@@ -1,0 +1,101 @@
+{
+  "id": "20261016T222020Z-ScanFailureRateHigh-ceb72b",
+  "alert": {
+    "status": "firing",
+    "alertname": "ScanFailureRateHigh",
+    "service": "scanner-backend",
+    "severity": "page",
+    "starts_at": "2026-10-16T22:20:10Z",
+    "values": {
+      "A": 0.7857142857142857,
+      "B": 1.0
+    },
+    "summary": "More than half of scans failed in the last 5 minutes"
+  },
+  "started_at": "2026-10-16T22:20:20.019974+00:00",
+  "mode": "runbook",
+  "fallback_reason": null,
+  "steps": [
+    {
+      "tool": "get_alert",
+      "args": {},
+      "result": {
+        "status": "firing",
+        "alertname": "ScanFailureRateHigh",
+        "service": "scanner-backend",
+        "severity": "page",
+        "starts_at": "2026-10-16T22:20:10Z",
+        "values": {
+          "A": 0.7857142857142857,
+          "B": 1.0
+        },
+        "summary": "More than half of scans failed in the last 5 minutes"
+      },
+      "by": "runbook"
+    },
+    {
+      "tool": "query_metrics",
+      "args": {
+        "name": "scan_failure_ratio"
+      },
+      "result": {
+        "name": "scan_failure_ratio",
+        "values": [
+          0.7857142857142857
+        ]
+      },
+      "by": "runbook"
+    },
+    {
+      "tool": "get_faults",
+      "args": {},
+      "result": {
+        "active": [
+          "scan-failure"
+        ]
+      },
+      "by": "runbook"
+    },
+    {
+      "tool": "check_health",
+      "args": {},
+      "result": {
+        "ok": true,
+        "http_status": 200,
+        "status": "ok",
+        "version": "dev"
+      },
+      "by": "runbook"
+    },
+    {
+      "tool": "clear_fault",
+      "args": {
+        "name": "scan-failure"
+      },
+      "result": {
+        "cleared": "scan-failure",
+        "http_status": 200
+      },
+      "by": "runbook"
+    }
+  ],
+  "summary": "",
+  "verification": {
+    "ok": true,
+    "health": {
+      "ok": true,
+      "http_status": 200,
+      "status": "ok",
+      "version": "dev"
+    },
+    "active_faults": [],
+    "failure_ratio": [
+      0.7857142857142858
+    ]
+  },
+  "outcome": "resolved",
+  "finished_at": "2026-10-16T22:20:35.046483+00:00",
+  "issue": {
+    "skipped": "GITHUB_TOKEN or GITHUB_REPOSITORY not set"
+  }
+}

@@ -66,3 +66,32 @@ rules:
         - mcp
         - httpx
         - openai
+
+  # The on-call agent (oncall/) talks to an LLM. It must never be able to
+  # reach scan target data, so it may not import the scanner's MCP client,
+  # services, models, or the MCP SDK.
+  - id: oncall-no-scanner-target-data-import
+    pattern-either:
+      - pattern: import app
+      - pattern: import app.$X
+      - pattern: from app import $X
+      - pattern: from app.$X import $Y
+      - pattern: import mcp
+      - pattern: import mcp.$X
+      - pattern: from mcp import $X
+      - pattern: from mcp.$X import $Y
+    paths:
+      include:
+        - "oncall/**"
+    message: >
+      The on-call agent sends data to an LLM, so it must not import scanner
+      code or the MCP SDK (scan target data could leak). It may only use the
+      backend's HTTP admin/health API and Prometheus numbers. See
+      docs/oncall-agent.md and security/ai-tool-data-policy.md.
+    severity: ERROR
+    languages:
+      - python
+    metadata:
+      category: security
+      technology:
+        - mcp

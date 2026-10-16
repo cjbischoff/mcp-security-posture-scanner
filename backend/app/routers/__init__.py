@@ -1,6 +1,7 @@
 import os
 
 from fastapi import APIRouter, Request
+from app.routers.admin import router as admin_router
 from app.routers.scans import router as scans_router
 
 router = APIRouter()
@@ -8,19 +9,22 @@ router = APIRouter()
 
 @router.get("/health")
 def health(request: Request):
-    """Liveness check. Returns trace_id for request correlation."""
+    """Liveness check.
+
+    Args:
+        request: The incoming request (unused).
+
+    Returns:
+        status, build version, and the full 32-hex trace_id of this request,
+        so a caller can look the request up in Tempo.
+    """
     from opentelemetry import trace
 
-    span = trace.get_current_span()
-    span_context = span.get_span_context() if span else None
-    trace_id = ""
-    if span_context and span_context.is_valid:
-        trace_id = hex(span_context.trace_id)[2:16]
-
+    ctx = trace.get_current_span().get_span_context()
     return {
         "status": "ok",
         "version": os.environ.get("APP_VERSION", "dev"),
-        "trace_id": trace_id or None,
+        "trace_id": format(ctx.trace_id, "032x") if ctx.is_valid else None,
     }
 
 
@@ -28,9 +32,11 @@ def health(request: Request):
 def metrics():
     """Application metrics with traces, histograms, and request counts.
 
-    When OTEL_EXPORTER_OTLP_ENDPOINT is set, traces export to the
-    configured collector. Otherwise they print to console.
-    All logs carry trace_id and span_id for request correlation.
+    In-process JSON snapshot. The OTel metrics (scanner_scans_total etc.)
+    export to the collector when OTEL_EXPORTER_OTLP_ENDPOINT is set.
+
+    Returns:
+        Scan, finding, and rule totals plus request counts and scan durations.
     """
     from app.services.scan_service import list_scans as get_scans
     from app.metrics import get_enhanced_metrics
@@ -56,3 +62,4 @@ def metrics():
 
 # Include sub-routers
 router.include_router(scans_router)
+router.include_router(admin_router)

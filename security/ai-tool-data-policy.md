@@ -59,13 +59,54 @@ The decision model is opt-in (`DECISION_MODEL_URL` and `DECISION_MODEL_API_KEY` 
 
 ---
 
+## Runtime — Telemetry
+
+Traces, metrics, and logs go to the local `lgtm` container (Grafana
+`otel-lgtm`) over OTLP/HTTP. It runs on the same host; no telemetry goes to a
+hosted service or an AI service. Telemetry carries only scan_id, transport,
+status, counts, durations, and a fixed error category. Target command, args,
+URL, target name, tool/resource/prompt metadata, and raw error text are kept
+out, and `tests/unit/test_telemetry.py` checks this. See
+`ops/observability.md`.
+
+---
+
+## Runtime — On-call Agent (optional LLM)
+
+The on-call agent (`oncall/`) can use an LLM provider the operator chooses
+(`LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`; any OpenAI-compatible API). If
+these are unset, nothing is sent and a deterministic runbook runs.
+
+**Sent to the provider:**
+- A fixed system prompt
+- The alert, reduced to: alert name, status, severity, service label, start
+  time, numeric alert values, and the alert summary (our own Grafana rule
+  text, cut to 200 characters)
+- Tool results: metric numbers (no labels), names of active fault flags,
+  backend health status/version/HTTP code, and action results (HTTP codes)
+
+**Never sent:**
+- Tool/resource/prompt names, descriptions, or schemas of any scan target
+- Scan target names, URLs, commands, or args
+- Finding text, scan errors, or log lines (the agent does not read Loki)
+- Grafana URLs, fingerprints, or labels other than the ones above
+- Secrets (admin token, GitHub token, deploy hook)
+
+The agent has no tool that reads scans, targets, or findings, and every tool
+returns a small typed summary instead of a raw response. Enforced by
+`oncall/tests/test_agent.py::test_llm_never_sees_target_data` and the Semgrep
+rule `oncall-no-scanner-target-data-import` (no backend or MCP SDK imports in
+`oncall/`). Details: `docs/oncall-agent.md`.
+
+---
+
 ## Third-Party Services
 
 | Service | Purpose | Data shared |
 |---|---|---|
 | GitHub Actions | CI/CD pipeline | Source code (during build/test) |
 | PyPI / npm | Package installation | Package names and versions |
-| Docker Hub | Base images (postgres, nginx, python, node) | None — pull only |
+| Docker Hub | Base images (postgres, nginx, python, node, grafana/otel-lgtm) | None — pull only |
 
 ---
 

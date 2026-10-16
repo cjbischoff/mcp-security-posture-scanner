@@ -4,34 +4,14 @@ The schema is managed by Alembic (``alembic upgrade head`` runs before
 uvicorn in the container), not created here.
 """
 import os
-from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
-from app.config import Settings
 from app import models  # noqa: F401 -- registers models on Base.metadata
 from app.routers import router as api_router
-from app.observability import setup_observability
-from app.metrics import setup_metrics, metrics_middleware
-
-
-settings = Settings()
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Application lifespan: set up observability and metrics.
-
-    Args:
-        app: The FastAPI application.
-
-    Yields:
-        Control to the running application.
-    """
-    setup_observability(app, settings)
-    setup_metrics(settings)
-    yield
+from app.observability import setup_telemetry
+from app.metrics import init_scan_series, metrics_middleware
 
 
 def mount_frontend(target: FastAPI, static_dir: str) -> None:
@@ -56,7 +36,10 @@ def mount_frontend(target: FastAPI, static_dir: str) -> None:
         return FileResponse(root / "index.html")
 
 
-app = FastAPI(title="MCP Security Posture Scanner API", lifespan=lifespan)
+app = FastAPI(title="MCP Security Posture Scanner API")
+# Before the first request: middleware cannot be added once the app starts
+setup_telemetry(app)
+init_scan_series()
 app.middleware("http")(metrics_middleware)
 app.include_router(api_router, prefix="/api")
 

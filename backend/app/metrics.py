@@ -1,81 +1,81 @@
-"""
-Enhanced metrics for the MCP scanner.
+"""Scan metrics: OTel instruments plus an in-memory snapshot for /api/metrics.
 
-Tracks scan count, finding count, scan duration histogram,
-and request counts by endpoint.
+OTel names (Prometheus names in LGTM, see ops/alerts.md):
+
+- ``scanner.scans`` counter, attribute ``status`` = completed|failed
+  (``scanner_scans_total``)
+- ``scanner.scan.duration`` histogram in seconds, one point per scan
+  (``scanner_scan_duration_seconds``)
+
+HTTP server metrics come from the FastAPI instrumentation.
 """
-import time
 from collections import defaultdict
-from typing import Any
+
 from fastapi import Request, Response
 from opentelemetry import metrics
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import ConsoleMetricExporter, PeriodicExportingMetricReader
-from opentelemetry.sdk.resources import Resource
 
+_meter = metrics.get_meter("scanner")
+SCANS = _meter.create_counter("scanner.scans", description="Finished scans by status")
+SCAN_DURATION = _meter.create_histogram(
+    "scanner.scan.duration",
+    unit="s",
+    description="Time from scan start to finish",
+    explicit_bucket_boundaries_advisory=[0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60],
+)
 
-# In-memory counters for the /api/metrics endpoint
+# In-memory values for the /api/metrics JSON endpoint
 _request_counts: dict[str, int] = defaultdict(int)
 _scan_durations: list[float] = []
 _finding_counts: list[int] = []
 
-# OTel instruments (set up lazily)
-_meter: Any = None
-_scan_duration_histogram: Any = None
 
+async def metrics_middleware(request: Request, call_next) -> Response:
+    """Count requests by path for the /api/metrics JSON endpoint.
 
-def setup_metrics(settings) -> None:
-    """Configure OTel metrics pipeline."""
-    global _meter, _scan_duration_histogram
+    Args:
+        request: The incoming request.
+        call_next: The next ASGI handler.
 
-    resource = Resource.create({
-        "service.name": "mcp-scanner-backend",
-        "service.version": "0.1.0",
-    })
-
-    reader = PeriodicExportingMetricReader(ConsoleMetricExporter(), export_interval_millis=5000)
-    provider = MeterProvider(resource=resource, metric_readers=[reader])
-    metrics.set_meter_provider(provider)
-
-    _meter = metrics.get_meter(__name__)
-    _scan_duration_histogram = _meter.create_histogram(
-        name="scan.duration.seconds",
-        description="Time to complete a scan",
-        unit="s",
-    )
-
-
-async def metrics_middleware(request: Request, call_next):
-    """Middleware that counts requests and records scan durations."""
-    start = time.time()
+    Returns:
+        The response from ``call_next``.
+    """
     response: Response = await call_next(request)
-
-    # Count by route
-    route = request.url.path
-    _request_counts[route] += 1
-
-    # Record scan duration from response headers
-    duration = time.time() - start
-    if _scan_duration_histogram:
-        _scan_duration_histogram.record(duration, {"route": route})
-
+    _request_counts[request.url.path] += 1
     return response
 
 
-def record_scan_duration(seconds: float) -> None:
-    """Record a completed scan's duration for metrics."""
+def init_scan_series() -> None:
+    """Export both ``status`` series at 0 from startup.
+
+    Prometheus ``increase()`` ignores a series' first sample, so a failed
+    series that first appears mid-incident would hide its first failures.
+    Call after the meter provider is installed; earlier values are dropped.
+    """
+    for status in ("completed", "failed"):
+        SCANS.add(0, {"status": status})
+
+
+def record_scan(status: str, seconds: float, finding_count: int | None = None) -> None:
+    """Record one finished scan.
+
+    Args:
+        status: ``completed`` or ``failed``.
+        seconds: Scan duration.
+        finding_count: Findings produced, for completed scans.
+    """
+    SCANS.add(1, {"status": status})
+    SCAN_DURATION.record(seconds, {"status": status})
     _scan_durations.append(seconds)
-    if _scan_duration_histogram:
-        _scan_duration_histogram.record(seconds, {"route": "scan_execution"})
+    if finding_count is not None:
+        _finding_counts.append(finding_count)
 
 
-def record_finding_count(count: int) -> None:
-    """Record finding count from a completed scan."""
-    _finding_counts.append(count)
+def get_enhanced_metrics() -> dict:
+    """Return the in-memory metrics snapshot.
 
-
-def get_enhanced_metrics():
-    """Return current metrics snapshot."""
+    Returns:
+        Request counts by path, scan duration stats, and finding stats.
+    """
     return {
         "request_count_total": dict(_request_counts),
         "scan_duration_seconds": {

@@ -18,9 +18,15 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://scanner:scanner@db:5432/scanner
       ALLOW_ARBITRARY_STDIO: "true"  # local only; never set in deployed envs
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://lgtm:4318
+      OTEL_SERVICE_NAME: scanner-backend
+      OTEL_METRIC_EXPORT_INTERVAL: "10000"  # ms; short so alerts fire quickly in a demo
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-local-admin-token}  # local default; see .env.example
     depends_on:
       db:
         condition: service_healthy
+      lgtm:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://localhost:8000/api/health')\""]
       interval: 5s
@@ -37,5 +43,42 @@ services:
     ports:
       - "127.0.0.1:3000:80"
 
+  oncall:
+    # Responder agent: Grafana webhook -> diagnose -> fix -> verify -> report.
+    build: ./oncall
+    environment:
+      SCANNER_URL: http://backend:8000
+      PROMETHEUS_URL: http://lgtm:9090
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-local-admin-token}  # same default as backend
+      VERIFY_WAIT_SECONDS: ${VERIFY_WAIT_SECONDS:-15}
+      # Optional; empty = deterministic runbook only. Set in .env.
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      RENDER_DEPLOY_HOOK: ${RENDER_DEPLOY_HOOK:-}
+      # ONCALL_ prefix so a GITHUB_TOKEN in your shell never leaks in by accident.
+      GITHUB_TOKEN: ${ONCALL_GITHUB_TOKEN:-}
+      GITHUB_REPOSITORY: ${ONCALL_GITHUB_REPOSITORY:-}
+      ROLLBACK_TAG: ${ROLLBACK_TAG:-}
+    volumes:
+      - ./ops/incidents:/app/ops/incidents
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  lgtm:
+    # Grafana + OTel collector + Tempo (traces) + Loki (logs) + Prometheus (metrics)
+    image: grafana/otel-lgtm:0.36.0
+    volumes:
+      - lgtmdata:/data
+      - ./ops/grafana/alerting.yaml:/otel-lgtm/grafana/conf/provisioning/alerting/scanner.yaml:ro
+      - ./ops/grafana/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/scanner.yaml:ro
+      - ./ops/grafana/scanner-dashboard.json:/otel-lgtm/scanner-dashboard.json:ro
+    ports:
+      - "127.0.0.1:3001:3000"  # Grafana UI; OTLP 4317/4318 stay on the compose network
+
 volumes:
   pgdata:
+  lgtmdata:

@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Request
 from app.routers.scans import router as scans_router
 
@@ -15,7 +17,11 @@ def health(request: Request):
     if span_context and span_context.is_valid:
         trace_id = hex(span_context.trace_id)[2:16]
 
-    return {"status": "ok", "trace_id": trace_id or None}
+    return {
+        "status": "ok",
+        "version": os.environ.get("APP_VERSION", "dev"),
+        "trace_id": trace_id or None,
+    }
 
 
 @router.get("/metrics")

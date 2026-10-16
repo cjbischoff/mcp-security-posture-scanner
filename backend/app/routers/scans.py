@@ -2,6 +2,8 @@
 Scan API router — endpoints for creating, listing, and inspecting scans.
 """
 from fastapi import APIRouter, HTTPException
+from typing import Literal
+
 from pydantic import BaseModel
 
 from app.services.scan_service import (
@@ -20,8 +22,10 @@ router = APIRouter()
 
 
 class ScanTargetCreate(BaseModel):
+    """Target submitted with a scan; transport is limited to the openapi enum."""
+
     name: str
-    transport: str = "stdio"
+    transport: Literal["stdio", "http"] = "stdio"
     command: str | None = None
     args: list[str] = []
     url: str | None = None

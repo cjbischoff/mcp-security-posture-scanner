@@ -16,18 +16,24 @@ from pathlib import Path
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-FIXTURE_PATH = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "stub_mcp_server.py"
-
-
 async def smoke_test() -> bool:
+    """Run one scan against the bundled fixture in a throwaway SQLite DB.
+
+    Returns:
+        True if the scan completed with findings.
+    """
+    import tempfile
+    from app import database, models  # noqa: F401 -- registers models
     from app.services.scan_service import create_scan, get_scan, get_report
+
+    db_dir = tempfile.mkdtemp()
+    database.Base.metadata.create_all(database.configure(f"sqlite:///{db_dir}/smoke.db"))
 
     # Create and run a scan
     result = await create_scan({
         "name": "smoke-test",
         "transport": "stdio",
-        "command": sys.executable,
-        "args": [str(FIXTURE_PATH)],
+        "command": "vulnerable-demo",
     })
     scan_id = result["id"]
     print(f"Scan {scan_id} created (status: {result['status']})")

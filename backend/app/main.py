@@ -1,7 +1,11 @@
+"""FastAPI application entry point.
+
+The schema is managed by Alembic (``alembic upgrade head`` runs before
+uvicorn in the container), not created here.
+"""
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.config import Settings
-from app.database import Base
 from app import models  # noqa: F401 -- registers models on Base.metadata
 from app.routers import router as api_router
 from app.observability import setup_observability
@@ -13,13 +17,14 @@ settings = Settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan — runs startup/shutdown logic."""
-    # Create tables on startup for SQLite simplicity (Alembic for prod)
-    from sqlalchemy import create_engine
+    """Application lifespan: set up observability and metrics.
 
-    engine = create_engine(settings.database_url)
-    Base.metadata.create_all(engine)
-    # Setup observability
+    Args:
+        app: The FastAPI application.
+
+    Yields:
+        Control to the running application.
+    """
     setup_observability(app, settings)
     setup_metrics(settings)
     yield

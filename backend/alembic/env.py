@@ -16,9 +16,16 @@ from app.models import (  # noqa: E402, F401
     scan,
     finding,
 )
-from app.database import Base  # noqa: E402
+from app.config import Settings  # noqa: E402
+from app.database import Base, normalize_database_url  # noqa: E402
 
 target_metadata = Base.metadata
+
+# DATABASE_URL wins over alembic.ini; "%" is escaped for configparser
+config.set_main_option(
+    "sqlalchemy.url",
+    normalize_database_url(Settings().database_url).replace("%", "%%"),
+)
 
 
 def run_migrations_offline() -> None:

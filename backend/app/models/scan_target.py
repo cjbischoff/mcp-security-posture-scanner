@@ -11,10 +11,12 @@ class TransportType(str, enum.Enum):
 
 
 class ScanTarget(Base):
+    """An MCP server to scan; identity is its full connection info, not its name."""
+
     __tablename__ = "scan_targets"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String, nullable=False, unique=True)
+    name = Column(String, nullable=False)
     transport = Column(SAEnum(TransportType), nullable=False)
     command = Column(String, nullable=True)
     args = Column(JSON, nullable=True)

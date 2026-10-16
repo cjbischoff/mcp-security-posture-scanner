@@ -35,6 +35,23 @@ def db_session():
         Base.metadata.drop_all(engine)
 
 
+@pytest.fixture(autouse=True)
+def app_db(tmp_path):
+    """Point the app's session factory at a fresh SQLite file per test.
+
+    Args:
+        tmp_path: pytest temporary directory.
+
+    Returns:
+        The database URL, so a test can reconnect to simulate a restart.
+    """
+    from app import database
+
+    url = f"sqlite:///{tmp_path / 'app.db'}"
+    Base.metadata.create_all(database.configure(url))
+    return url
+
+
 @pytest.fixture
 def scan_target(db_session):
     """Create a ScanTarget fixture."""

@@ -31,6 +31,13 @@ target (brief Section 2, item 3 — this boundary is permanent).
 
 ## Target restrictions
 
+- **stdio in public mode:** the API accepts only bundled fixture names (for
+  example `vulnerable-demo`) and no extra args. It resolves the name to the
+  fixture server on the server side, so a caller cannot run a command.
+- **stdio in local mode:** any command runs only when
+  `ALLOW_ARBITRARY_STDIO=true`. `docker-compose.yml` sets it for local use and
+  publishes ports on 127.0.0.1 only. Never set it in a deployed environment.
+
 - Default targets are localhost or self-hosted fixture servers only.
 - Any non-localhost target requires an explicit `allow_external` consent
   flag in both API and UI; granting it is logged. Scan only servers you own

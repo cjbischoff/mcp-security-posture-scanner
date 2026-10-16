@@ -2,13 +2,12 @@
 Scan service — creates and runs scans, produces reports.
 """
 import asyncio
-import json
 import logging
 from datetime import datetime, timezone
 
 from app.mcp_client.client import MCPClient, MCPClientError
 from app.rules.orchestrator import run_all_rules
-from app.services.consent import validate_target, ConsentError
+from app.services.consent import validate_target, resolve_stdio
 
 logger = logging.getLogger(__name__)
 
@@ -35,15 +34,14 @@ async def create_scan(target_data: dict) -> dict:
 
     Returns the scan dict immediately.
     """
-    # Validate consent
-    try:
-        validate_target(
-            target_data.get("transport", "stdio"),
-            target_data.get("url"),
-            target_data.get("allow_external", False),
-        )
-    except ConsentError as e:
-        raise
+    # Validate consent; raises ConsentError for the router to map to 422
+    validate_target(
+        target_data.get("transport", "stdio"),
+        target_data.get("url"),
+        target_data.get("allow_external", False),
+    )
+    if target_data.get("transport", "stdio") == "stdio":
+        resolve_stdio(target_data.get("command"), target_data.get("args"))
 
     # Resolve or create ScanTarget
     target_name = target_data["name"]
@@ -103,8 +101,7 @@ async def _execute_scan(scan_id: int, target_data: dict) -> None:
             await client.connect_http(target_data["url"])
         else:
             await client.connect_stdio(
-                target_data.get("command"),
-                target_data.get("args", []),
+                *resolve_stdio(target_data.get("command"), target_data.get("args"))
             )
 
         snapshot = await client.enumerate()

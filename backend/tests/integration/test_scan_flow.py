@@ -28,6 +28,33 @@ async def _client():
     return httpx.AsyncClient(transport=transport, base_url=BASE_URL)
 
 
+@pytest.fixture(autouse=True)
+def local_mode(monkeypatch):
+    """These tests run the fixture via sys.executable, which needs local mode."""
+    monkeypatch.setenv("ALLOW_ARBITRARY_STDIO", "true")
+
+
+@pytest.mark.asyncio(scope="module")
+async def test_public_mode_rejects_arbitrary_command(monkeypatch):
+    monkeypatch.delenv("ALLOW_ARBITRARY_STDIO")
+    async with await _client() as ac:
+        resp = await ac.post("/api/scans", json={
+            "target": {"name": "rce", "transport": "stdio",
+                       "command": "touch", "args": ["/tmp/x"]}
+        })
+        assert resp.status_code == 422
+
+
+@pytest.mark.asyncio(scope="module")
+async def test_public_mode_accepts_fixture_name(monkeypatch):
+    monkeypatch.delenv("ALLOW_ARBITRARY_STDIO")
+    async with await _client() as ac:
+        resp = await ac.post("/api/scans", json={
+            "target": {"name": "demo", "transport": "stdio", "command": "vulnerable-demo"}
+        })
+        assert resp.status_code == 201
+
+
 @pytest.mark.asyncio(scope="module")
 async def test_health():
     async with await _client() as ac:

@@ -132,7 +132,67 @@ paths:
                   status:
                     type: string
                     example: ok
+                  version:
+                    type: string
+                    example: dev
+                  trace_id:
+                    type: string
+                    nullable: true
+                    pattern: '^[0-9a-f]{32}$'
+                    description: Full W3C trace ID of this request, to look it up in Tempo
+  /admin/faults:
+    get:
+      operationId: getFaults
+      summary: Show fault-injection flags (admin)
+      security: [{AdminToken: []}]
+      responses:
+        '200':
+          description: Current flags
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Faults'
+        '401':
+          description: Missing or wrong admin token
+        '404':
+          description: ADMIN_TOKEN is not set on the server
+  /admin/faults/scan-failure:
+    post:
+      operationId: enableScanFailure
+      summary: Make new scans fail fast (category fault_injected) to trigger ScanFailureRateHigh
+      security: [{AdminToken: []}]
+      responses:
+        '200':
+          description: Flags after the change
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Faults'
+        '401':
+          description: Missing or wrong admin token
+        '404':
+          description: ADMIN_TOKEN is not set on the server
+    delete:
+      operationId: disableScanFailure
+      summary: Turn the scan-failure fault off
+      security: [{AdminToken: []}]
+      responses:
+        '200':
+          description: Flags after the change
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Faults'
+        '401':
+          description: Missing or wrong admin token
+        '404':
+          description: ADMIN_TOKEN is not set on the server
 components:
+  securitySchemes:
+    AdminToken:
+      type: http
+      scheme: bearer
+      description: Value of the server's ADMIN_TOKEN env var
   parameters:
     ScanId:
       name: scan_id
@@ -141,6 +201,12 @@ components:
       schema:
         type: integer
   schemas:
+    Faults:
+      type: object
+      required: [scan_failure]
+      properties:
+        scan_failure:
+          type: boolean
     ScanTargetCreate:
       type: object
       required: [name, transport]

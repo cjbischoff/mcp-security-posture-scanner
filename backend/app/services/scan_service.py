@@ -10,15 +10,23 @@ import logging
 import time
 from datetime import datetime, timezone
 
+from opentelemetry import trace
+from opentelemetry.trace import StatusCode
+
 from app import database
+from app.metrics import record_scan
 from app.mcp_client.client import MCPClient
 from app.models.scan import Scan, ScanStatus
 from app.models.scan_target import ScanTarget
 from app.repositories import scans as repo
 from app.rules.orchestrator import run_all_rules
-from app.services.consent import validate_target, resolve_stdio
+from app.services.consent import ConsentError, validate_target, resolve_stdio
 
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
+
+# In-memory fault flags, toggled by the admin router to trigger alerts
+FAULTS: dict[str, bool] = {"scan_failure": False}
 
 # Strong refs so running tasks are not garbage-collected mid-scan
 _tasks: set[asyncio.Task] = set()
@@ -46,6 +54,7 @@ async def create_scan(target_data: dict) -> dict:
         target = repo.get_or_create_target(session, target_data)
         scan = repo.create_scan(session, target)
         response = _scan_to_response(scan)
+    logger.info("scan submitted", extra={"scan_id": scan.id, "transport": transport})
 
     task = asyncio.create_task(_execute_scan(scan.id, target_data))
     _tasks.add(task)
@@ -53,30 +62,101 @@ async def create_scan(target_data: dict) -> dict:
     return response
 
 
+def _span(name: str, attributes: dict):
+    """Start a span that never copies exception text into events or status.
+
+    Args:
+        name: Span name.
+        attributes: Safe attributes (scan_id, transport).
+
+    Returns:
+        A context manager yielding the span.
+    """
+    return tracer.start_as_current_span(
+        name, attributes=attributes, record_exception=False, set_status_on_exception=False
+    )
+
+
+class FaultInjected(Exception):
+    """Raised by a scan while the admin ``scan_failure`` fault is on."""
+
+
+def error_category(exc: BaseException, phase: str) -> str:
+    """Map a scan failure to a fixed category that is safe for telemetry.
+
+    Exception text can hold the target's command, URL, or server output, so
+    only this category goes to logs and spans; the text stays in ``scan.error``.
+
+    Args:
+        exc: The exception that ended the scan.
+        phase: Where it happened: ``connect``, ``enumerate``, or ``finish``.
+
+    Returns:
+        One of fault_injected, consent_rejected, timeout, connect_failed,
+        protocol_error, internal_error.
+
+    Example:
+        >>> error_category(TimeoutError(), "connect")
+        'timeout'
+    """
+    chain = [exc, exc.__cause__]
+    if isinstance(exc, FaultInjected):
+        return "fault_injected"
+    if isinstance(exc, ConsentError):
+        return "consent_rejected"
+    if any(isinstance(e, TimeoutError) for e in chain):
+        return "timeout"
+    return {"connect": "connect_failed", "enumerate": "protocol_error"}.get(phase, "internal_error")
+
+
 async def _execute_scan(scan_id: int, target_data: dict) -> None:
     """Connect, enumerate, run rules, and store the snapshot and findings.
 
+    Runs as an asyncio task. ``create_task`` copies the caller's contextvars,
+    so the ``scan.execute`` span is a child of the POST /api/scans span and
+    the whole journey shares one trace_id.
+
     Uses its own session, held for the whole task so it stays bound to the
     engine that existed when the scan started.
-    """
-    from app.metrics import record_scan_duration, record_finding_count
 
-    start_time = time.time()
-    with database.SessionLocal() as session:
+    Args:
+        scan_id: The pending scan to run.
+        target_data: Target fields from the API.
+    """
+    transport = target_data.get("transport", "stdio")
+    log = {"scan_id": scan_id, "transport": transport}
+    start_time = time.monotonic()
+    phase = "connect"
+    with (
+        _span("scan.execute", log) as span,
+        database.SessionLocal() as session,
+    ):
         scan = session.get(Scan, scan_id)
         try:
+            logger.info("scan started", extra=log)
             scan.status = ScanStatus.RUNNING
             session.commit()
+            if FAULTS["scan_failure"]:
+                raise FaultInjected("Injected fault: scan failure (admin fault injection)")
 
             client = MCPClient()
-            if target_data.get("transport", "stdio") == "http":
-                await client.connect_http(target_data["url"])
-            else:
-                await client.connect_stdio(
-                    *resolve_stdio(target_data.get("command"), target_data.get("args"))
-                )
-            snapshot = await client.enumerate()
+            with _span("mcp.connect", log):
+                if transport == "http":
+                    await client.connect_http(target_data["url"])
+                else:
+                    await client.connect_stdio(
+                        *resolve_stdio(target_data.get("command"), target_data.get("args"))
+                    )
+            phase = "enumerate"
+            with _span("mcp.enumerate", log) as sp:
+                snapshot = await client.enumerate()
+                sp.set_attributes({
+                    "tool_count": len(snapshot.tools),
+                    "resource_count": len(snapshot.resources),
+                    "prompt_count": len(snapshot.prompts),
+                })
             await client.close()
+            phase = "finish"
 
             # Raw snapshot is needed later for diff / MCP-010 drift
             scan.raw_snapshot = {
@@ -92,22 +172,37 @@ async def _execute_scan(scan_id: int, target_data: dict) -> None:
                     {"name": p.name, "description": p.description} for p in snapshot.prompts
                 ],
             }
-            findings = run_all_rules(snapshot)
+            with _span("rules.run", log) as sp:
+                findings = run_all_rules(snapshot)
+                sp.set_attribute("finding_count", len(findings))
             repo.add_findings(session, scan, findings)
             scan.status = ScanStatus.COMPLETED
             scan.finished_at = datetime.now(timezone.utc)
             session.commit()
 
-            record_scan_duration(time.time() - start_time)
-            record_finding_count(len(findings))
+            duration = time.monotonic() - start_time
+            span.set_attributes({"status": "completed", "finding_count": len(findings)})
+            record_scan("completed", duration, len(findings))
+            logger.info("scan completed", extra={
+                **log, "status": "completed", "finding_count": len(findings),
+                "duration_s": round(duration, 3),
+            })
         except Exception as e:
-            logger.error(f"Scan {scan_id} failed: {e}")
+            category = error_category(e, phase)
             session.rollback()
             scan.status = ScanStatus.FAILED
-            scan.error = str(e)
+            scan.error = str(e)  # user-facing only; never sent to telemetry
             scan.finished_at = datetime.now(timezone.utc)
             session.commit()
-            record_scan_duration(time.time() - start_time)
+
+            duration = time.monotonic() - start_time
+            span.set_attributes({"status": "failed", "error_category": category})
+            span.set_status(StatusCode.ERROR, category)
+            record_scan("failed", duration)
+            logger.error("scan failed", extra={
+                **log, "status": "failed", "error_category": category,
+                "duration_s": round(duration, 3),
+            })
 
 
 def get_scan(scan_id: int) -> dict | None:

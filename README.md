@@ -116,7 +116,9 @@ model). It is not implemented yet; see issue #12.
 
 The scan journey (POST `/api/scans`, background scan, report) is instrumented
 with OpenTelemetry and exported over OTLP/HTTP to a local Grafana LGTM
-container (`lgtm` in `docker-compose.yml`). Details: `ops/observability.md`.
+container (`lgtm` in `docker-compose.yml`). The deployed Render services send
+the same signals to Grafana Cloud instead; only env vars differ. Details:
+`ops/observability.md`.
 
 - **Traces (Tempo):** HTTP spans from the FastAPI instrumentation, plus
   `scan.execute` > `mcp.connect`, `mcp.enumerate`, `rules.run`. The background

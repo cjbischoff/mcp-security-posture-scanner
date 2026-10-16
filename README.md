@@ -235,9 +235,16 @@ hook, then waits until `/api/health` reports that SHA as `version`.
   GitHub environment `prod` needs a reviewer to approve the run.
 - **Rollback:** run the same workflow by hand with an earlier commit SHA as
   the tag.
-- **URLs:** dev `DEV_URL` and prod `PROD_URL` (repository variables) are
-  pending Render setup (issue #10). Until the deploy hook secrets are set,
-  the deploy step logs a warning and skips.
+- **URLs:**
+  - Prod: https://scanner-prod.onrender.com
+  - Dev: https://scanner-dev-4o95.onrender.com
+
+  Both run on Render's free plan with Neon Postgres (one branch per
+  environment). A free instance sleeps after 15 minutes idle, so the first
+  request after that can take about a minute.
+- **Public mode:** deployed services do not set `ALLOW_ARBITRARY_STDIO`, so
+  scans accept only the bundled `vulnerable-demo` fixture. Try it: open the
+  UI, choose stdio, and enter `vulnerable-demo` as the command.
 
 ## Agent team
 

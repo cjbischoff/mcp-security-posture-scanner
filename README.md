@@ -12,7 +12,7 @@ A security scanner that connects to an MCP server as a client, enumerates tools/
 # Full stack
 docker compose up --build
 
-# All tests, one command (backend 102 + frontend 26)
+# All tests, one command (backend 114 + frontend 26)
 make test
 
 # Backend only
@@ -42,15 +42,18 @@ cd backend && uv run python scripts/smoke_test.py
 
 ## API endpoints
 
-| Method | Path | Description | Traced |
-|---|---|---|---|
-| GET | `/api/health` | Liveness check — returns `trace_id` for request correlation | ✅ |
-| GET | `/api/metrics` | Application metrics: scan count, request counts, scan duration histogram | ✅ |
-| POST | `/api/scans` | Submit a scan target (stdio or HTTP), returns scan ID | ✅ |
-| GET | `/api/scans` | List scans, newest first | ✅ |
-| GET | `/api/scans/{id}` | Scan status and metadata | ✅ |
-| GET | `/api/scans/{id}/report` | Findings report (409 if not yet completed) | ✅ |
-| GET | `/api/scans/{id}/diff/{other_id}` | Diff findings between two scans of the same target | ✅ |
+Every endpoint gets an HTTP server span from the FastAPI OpenTelemetry instrumentation (see [Observability](#observability)).
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/health` | Liveness check; returns the request's full 32-hex `trace_id` |
+| GET | `/api/metrics` | In-process JSON snapshot: scan/finding totals, request counts, scan durations |
+| POST | `/api/scans` | Submit a scan target (stdio or HTTP), returns scan ID |
+| GET | `/api/scans` | List scans, newest first |
+| GET | `/api/scans/{id}` | Scan status and metadata |
+| GET | `/api/scans/{id}/report` | Findings report (409 if not yet completed) |
+| GET | `/api/scans/{id}/diff/{other_id}` | Diff findings between two scans of the same target |
+| GET/POST/DELETE | `/api/admin/faults[/scan-failure]` | Fault injection to trigger the alert. Needs `Authorization: Bearer $ADMIN_TOKEN`; 404 when `ADMIN_TOKEN` is unset |
 
 **Target types:**
 - **stdio:** in public mode, `command` must be a bundled fixture name (`vulnerable-demo`) with no `args`. Any command runs only when `ALLOW_ARBITRARY_STDIO=true` (set in `docker-compose.yml` for local use; never set it in a deployed environment).
@@ -73,28 +76,42 @@ cd backend && uv run python scripts/smoke_test.py
 
 ## Observability
 
-The application is instrumented with **OpenTelemetry**:
+The scan journey (POST `/api/scans`, background scan, report) is instrumented
+with OpenTelemetry and exported over OTLP/HTTP to a local Grafana LGTM
+container (`lgtm` in `docker-compose.yml`). Details: `ops/observability.md`.
 
-- **Traces:** Every HTTP request generates a trace. Traces export via OTLP (if `OTEL_EXPORTER_OTLP_ENDPOINT` is set) or fall back to console output for local development.
-- **Trace IDs:** Every log line includes `trace_id` and `span_id` for correlating logs to a single request. The `/api/health` endpoint returns the current request's `trace_id`.
-- **Metrics:** Scan duration histogram, per-endpoint request counters, finding counts. View at `/api/metrics`.
-- **Structured logs:** All logs carry trace context. No customer data or credentials are sent to telemetry.
+- **Traces (Tempo):** HTTP spans from the FastAPI instrumentation, plus
+  `scan.execute` > `mcp.connect`, `mcp.enumerate`, `rules.run`. The background
+  scan stays in the POST request's trace.
+- **Logs (Loki and stderr):** one JSON object per line with the full 32-hex
+  `trace_id`, 16-hex `span_id`, level, logger, message, and `scan_id`.
+- **Metrics (Prometheus):** `scanner_scans_total{status="completed"|"failed"}`,
+  `scanner_scan_duration_seconds_*`, and the HTTP server metrics.
+- **Redaction:** no target command, args, URL, name, tool data, or raw error
+  text goes to telemetry. Failed scans report an `error_category` (for example
+  `connect_failed`, `timeout`); the full error stays in the API response. A
+  unit test checks this.
+- **Alert:** `ScanFailureRateHigh` pages when more than half of the scans in
+  5 minutes fail (at least 3 scans). It posts to the on-call webhook. Rule,
+  rationale, and trigger: `ops/alerts.md`.
 
 ```bash
-# View trace output (console exporter)
-docker compose logs backend | grep 'trace='
-
-# View metrics
-curl http://localhost:8000/api/metrics
+docker compose up --build -d
+open http://127.0.0.1:3001             # Grafana: dashboard "Scanner — scan journey"
+scripts/trigger-alert.sh               # inject scan failures; alert fires in about 1-2 min
+scripts/trigger-alert.sh --off
 ```
+
+Without `OTEL_EXPORTER_OTLP_ENDPOINT` (tests, the Render deploy) nothing is
+exported and only the JSON logs are written.
 
 ## Test coverage
 
-**112 tests — all passing.**
+**140 tests — all passing.**
 
 | Layer | Count | What |
 |---|---|---|
-| Backend unit tests | 86 | Models, config, DB URL, scan repository, health, MCP client, 10 rules, consent, diff service |
+| Backend unit tests | 98 | Models, config, DB URL, scan repository, health, MCP client, 10 rules, consent, diff service, telemetry (trace IDs, redaction, metrics), admin fault API |
 | Backend integration tests | 16 | MCP client enumerate (3), rule engine (2), scan flow (9), persistence across restart (2) |
 | Frontend unit tests | 26 | API client (8), NewScanPage (5), ScansPage (3), ScanReportPage (5), ScanDiffPage (5) |
 | Smoke test | 1 | Standalone: full scan → report → findings against stub fixture server |
@@ -119,7 +136,7 @@ A Postgres volume created before migrations existed (tables but no `alembic_vers
 ## Containerization
 
 ```bash
-# Full stack (3 services)
+# Full stack (db, backend, frontend, lgtm, oncall)
 docker compose up --build
 
 # Individual images

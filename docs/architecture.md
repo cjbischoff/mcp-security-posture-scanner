@@ -17,7 +17,13 @@ Planned system architecture (Phase 0 — updated as implementation lands).
   `DATABASE_URL`. Alembic migrations run at container start
   (`alembic upgrade head`).
 - **Containerization** — Docker Compose: `frontend` (nginx, proxies `/api`),
-  `backend` (uvicorn :8000), `db` (Postgres 16).
+  `backend` (uvicorn :8000), `db` (Postgres 16), `lgtm` (Grafana
+  `otel-lgtm`: OTel collector, Tempo, Loki, Prometheus, Grafana on
+  127.0.0.1:3001), `oncall` (alert responder).
+- **Observability** — OpenTelemetry SDK in the backend exports traces,
+  metrics, and logs over OTLP/HTTP to `lgtm`. Grafana alerting posts
+  `ScanFailureRateHigh` to the `oncall` webhook. See `ops/observability.md`
+  and `ops/alerts.md`.
 - **CI/CD** — GitHub Actions: `ci.yml` lints and runs unit + integration
   tests on every push/PR; `deploy.yml` deploys on merge to main after CI
   passes; `security-scan.yml` (Phase 3) runs Semgrep incl. the custom
@@ -48,6 +54,34 @@ sequenceDiagram
     F->>B: GET /api/scans/{id}/report
     B-->>F: findings by severity
 ```
+
+## Telemetry flow
+
+```mermaid
+flowchart LR
+    subgraph backend [backend container]
+        R[FastAPI request span<br/>POST /api/scans] --> S[scan.execute<br/>asyncio task, same trace]
+        S --> C[mcp.connect] & E[mcp.enumerate] & RR[rules.run]
+        S --> M[scanner.scans counter<br/>scanner.scan.duration histogram]
+        S --> L[JSON logs<br/>trace_id, span_id, scan_id,<br/>error_category]
+    end
+    subgraph lgtm [lgtm container]
+        OC[OTel collector :4318]
+        OC --> T[(Tempo<br/>traces)]
+        OC --> LK[(Loki<br/>logs)]
+        OC --> P[(Prometheus<br/>scanner_scans_total ...)]
+        G[Grafana :3001<br/>dashboard + alert rule]
+        T & LK & P --> G
+    end
+    R & C & E & RR -- "OTLP/HTTP spans" --> OC
+    M -- "OTLP/HTTP metrics, 10s" --> OC
+    L -- "OTLP/HTTP logs" --> OC
+    G -- "ScanFailureRateHigh webhook" --> ON[oncall :8080/alert]
+```
+
+Only scan_id, transport, status, counts, durations, and an error category
+cross into telemetry. Target command, args, URL, name, tool metadata, and raw
+error text do not.
 
 ## Diff / drift detection
 

@@ -59,13 +59,25 @@ The decision model is opt-in (`DECISION_MODEL_URL` and `DECISION_MODEL_API_KEY` 
 
 ---
 
+## Runtime — Telemetry
+
+Traces, metrics, and logs go to the local `lgtm` container (Grafana
+`otel-lgtm`) over OTLP/HTTP. It runs on the same host; no telemetry goes to a
+hosted service or an AI service. Telemetry carries only scan_id, transport,
+status, counts, durations, and a fixed error category. Target command, args,
+URL, target name, tool/resource/prompt metadata, and raw error text are kept
+out, and `tests/unit/test_telemetry.py` checks this. See
+`ops/observability.md`.
+
+---
+
 ## Third-Party Services
 
 | Service | Purpose | Data shared |
 |---|---|---|
 | GitHub Actions | CI/CD pipeline | Source code (during build/test) |
 | PyPI / npm | Package installation | Package names and versions |
-| Docker Hub | Base images (postgres, nginx, python, node) | None — pull only |
+| Docker Hub | Base images (postgres, nginx, python, node, grafana/otel-lgtm) | None — pull only |
 
 ---
 

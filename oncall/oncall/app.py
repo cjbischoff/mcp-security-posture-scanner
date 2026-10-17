@@ -3,6 +3,7 @@
 Run: ``uvicorn oncall.app:app --host 0.0.0.0 --port 8080``.
 """
 
+import hmac
 import logging
 import threading
 
@@ -55,7 +56,16 @@ def create_app(config: Config | None = None, client: httpx.Client | None = None)
 
     @app.post("/alert", status_code=202)
     async def alert(request: Request, tasks: BackgroundTasks) -> JSONResponse:
-        """Accept a Grafana webhook; respond in the background."""
+        """Accept a Grafana webhook; respond in the background.
+
+        Requires ``Authorization: Bearer <ONCALL_WEBHOOK_TOKEN>`` (constant-time
+        compare). Missing, wrong, or unconfigured token -> 401, no incident.
+        """
+        token = config.oncall_webhook_token.encode()
+        sent = request.headers.get("authorization", "").encode()
+        if not token or not hmac.compare_digest(sent, b"Bearer " + token):
+            log.warning("rejected /alert: missing or wrong webhook token")
+            raise HTTPException(401, "unauthorized")
         try:
             payload = await request.json()
             parsed = parse_alert(payload)

@@ -11,6 +11,9 @@ contactPoints:
         settings:
           url: http://oncall:8080/alert
           httpMethod: POST
+          # Sends "Authorization: Bearer <token>"; oncall rejects anything else.
+          authorization_scheme: Bearer
+          authorization_credentials: $ONCALL_WEBHOOK_TOKEN
 
 policies:
   - orgId: 1

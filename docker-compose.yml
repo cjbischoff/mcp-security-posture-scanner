@@ -50,6 +50,8 @@ services:
       SCANNER_URL: http://backend:8000
       PROMETHEUS_URL: http://lgtm:9090
       ADMIN_TOKEN: ${ADMIN_TOKEN:-local-admin-token}  # same default as backend
+      # Shared secret Grafana must send on POST /alert; same default as lgtm.
+      ONCALL_WEBHOOK_TOKEN: ${ONCALL_WEBHOOK_TOKEN:-local-oncall-token}
       VERIFY_WAIT_SECONDS: ${VERIFY_WAIT_SECONDS:-15}
       # Optional; empty = deterministic runbook only. Set in .env.
       LLM_BASE_URL: ${LLM_BASE_URL:-}
@@ -71,6 +73,9 @@ services:
   lgtm:
     # Grafana + OTel collector + Tempo (traces) + Loki (logs) + Prometheus (metrics)
     image: grafana/otel-lgtm:0.36.0
+    environment:
+      # Read by ops/grafana/alerting.yaml for the webhook Authorization header.
+      ONCALL_WEBHOOK_TOKEN: ${ONCALL_WEBHOOK_TOKEN:-local-oncall-token}
     volumes:
       - lgtmdata:/data
       - ./ops/grafana/alerting.yaml:/otel-lgtm/grafana/conf/provisioning/alerting/scanner.yaml:ro

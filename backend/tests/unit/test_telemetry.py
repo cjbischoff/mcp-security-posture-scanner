@@ -2,7 +2,6 @@
 import asyncio
 import json
 import logging
-import re
 
 import httpx
 import pytest
@@ -54,11 +53,25 @@ def _points(reader: InMemoryMetricReader) -> dict:
     return out
 
 
-def test_health_trace_id_is_full_32_hex():
+def test_health_creates_no_trace(spans):
+    """Health checks are excluded, so they do not flood Tempo search."""
     from fastapi.testclient import TestClient
 
-    trace_id = TestClient(app).get("/api/health").json()["trace_id"]
-    assert re.fullmatch(r"[0-9a-f]{32}", trace_id)
+    assert TestClient(app).get("/api/health").json()["trace_id"] is None
+    assert spans.get_finished_spans() == ()
+
+
+def test_span_urls_drop_query_string(spans):
+    """Query strings can hold user data; spans keep only the path."""
+    from fastapi.testclient import TestClient
+
+    TestClient(app).get("/api/scans?q=LEAKQUERY")
+    finished = spans.get_finished_spans()
+    assert finished
+    assert "LEAKQUERY" not in repr([dict(s.attributes) for s in finished])
+    server = next(s for s in finished if s.name == "GET /api/scans")
+    assert server.attributes["http.route"] == "/api/scans"
+    assert server.attributes["http.target"] == "/api/scans"
 
 
 def test_json_formatter_emits_full_ids_and_scan_id():

@@ -1,25 +1,20 @@
+"""MCP-005 is inactive until the HTTP transport exists (#21).
+
+``MCPClient.connect_http`` always raises, so an HTTP target never reaches
+the rules. The rule is kept out of the registry and the rule count.
 """
-Tests for MCP-005: Unauthenticated HTTP transport.
+from fastapi.testclient import TestClient
 
-Note: This rule is a placeholder until Plan 1.4 provides transport context.
-For now it always returns empty.
-"""
-from app.rules.mcp005_unauthenticated import MCP005UnauthenticatedRule
-from app.mcp_client.models import MCPTool, MCPSnapshot
+from app.main import app
+from app.rules.registry import RULES, get_rule
 
 
-class TestMCP005Unauthenticated:
-    rule = MCP005UnauthenticatedRule()
+def test_mcp005_not_registered():
+    """The registry holds the 9 active rules and no MCP-005."""
+    assert get_rule("MCP-005") is None
+    assert len(RULES) == 9
 
-    def test_placeholder_returns_empty(self):
-        """Snapshot-only check returns no findings (transport context comes from scan service)."""
-        snapshot = MCPSnapshot()
-        findings = self.rule.check(snapshot)
-        assert len(findings) == 0
 
-    def test_with_tools_still_empty(self):
-        """Even with tools present, snapshot-only check returns empty."""
-        tool = MCPTool(name="test", input_schema={"type": "object"})
-        snapshot = MCPSnapshot(tools=[tool])
-        findings = self.rule.check(snapshot)
-        assert len(findings) == 0
+def test_metrics_rule_count_matches_registry():
+    """/api/metrics reports the active rule count, not a hard-coded 10."""
+    assert TestClient(app).get("/api/metrics").json()["rule_count_total"] == len(RULES)

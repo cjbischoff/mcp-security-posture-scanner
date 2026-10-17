@@ -15,8 +15,8 @@ def health(request: Request):
         request: The incoming request (unused).
 
     Returns:
-        status, build version, and the full 32-hex trace_id of this request,
-        so a caller can look the request up in Tempo.
+        status, build version, and trace_id. Health checks are excluded
+        from tracing (see ``setup_telemetry``), so trace_id is normally None.
     """
     from opentelemetry import trace
 
@@ -40,10 +40,11 @@ def metrics():
     """
     from app.services.scan_service import list_scans as get_scans
     from app.metrics import get_enhanced_metrics
+    from app.rules.registry import RULES
 
     scans = get_scans()
     finding_count = sum(s.get("finding_count", 0) for s in scans)
-    rule_count = 10
+    rule_count = len(RULES)
 
     result = {
         "scan_count_total": len(scans),

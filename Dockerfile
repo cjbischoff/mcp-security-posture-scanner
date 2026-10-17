@@ -27,4 +27,4 @@ ARG GIT_SHA=dev
 ENV APP_VERSION=$GIT_SHA STATIC_DIR=/app/static PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
 # Render sets PORT; default 8000 elsewhere
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --no-access-log"]

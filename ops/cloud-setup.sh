@@ -17,6 +17,11 @@ cd "$(dirname "$0")/.."
 [ -f .env ] || { echo ".env not found" >&2; exit 1; }
 set -a; . ./.env; set +a
 : "${GRAFANA_CLOUD_TOKEN:?missing in .env}" "${RENDER_API_KEY:?missing in .env}"
+case $GRAFANA_CLOUD_TOKEN in
+  glc_*) ;;
+  glsa_*) echo "GRAFANA_CLOUD_TOKEN is a stack service account token (glsa_). Rename it to GRAFANA_SA_TOKEN and add a Cloud access policy token (glc_) as GRAFANA_CLOUD_TOKEN." >&2; exit 1 ;;
+  *) echo "GRAFANA_CLOUD_TOKEN should be a Cloud access policy token (starts with glc_)." >&2; exit 1 ;;
+esac
 services=("$@"); [ $# -eq 0 ] && services=(scanner-dev scanner-prod)
 IMAGE=ghcr.io/cjbischoff/mcp-security-posture-scanner
 

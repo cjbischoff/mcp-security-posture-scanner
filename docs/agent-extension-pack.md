@@ -21,7 +21,7 @@ A deterministic rule set is immune to this attack class. Rules are human-written
 |---|---|
 | **Architecture** | `app/rules/` modules never import HTTP clients, LLM SDKs, or any network library |
 | **Static analysis** | Custom Semgrep rule `no-llm-on-untrusted-mcp-data` (SARIF in `security/semgrep/`) flags any HTTP request with snapshot/description/schema data in the body |
-| **Tests** | `test_rules/` directory contains 37 unit tests — none require network access |
+| **Tests** | `backend/tests/unit/rules/` contains 37 unit tests — none require network access |
 | **Documentation** | `security/ai-tool-data-policy.md` and `docs/permissions.md` explicitly state the boundary |
 
 ### Phase 5 decision model (if configured)

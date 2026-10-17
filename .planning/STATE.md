@@ -1,5 +1,14 @@
 # STATE — MCP Security Posture Scanner
 
+> **Status note (2026-10-17):** this file is the original GSD plan, written
+> 2026-10-15 before the code. It is not kept up to date. The live tracker is
+> [GitHub Issues](https://github.com/cjbischoff/mcp-security-posture-scanner/issues)
+> (index: [`docs/task-tracker.md`](../docs/task-tracker.md)). Actual status:
+> Phases 1-4 were built and committed on 2026-10-16 (`9b844f6`, `22fecd4`,
+> `a9610a6`, `5dfab96`, then issues #4-#11); deployment to Render dev and
+> prod is live (#10); Phase 5 (decision model) is not built (#12). Known gaps
+> are open issues #18-#26.
+
 **Generated:** 2026-10-15
 **Source:** Intel synthesis from 7 ingested documents
 
@@ -22,11 +31,11 @@
 | Phase | Description | Status |
 |---|---|---|
 | Phase 0 | Scaffolding (dirs, compose skeleton, openapi.yaml, docs, CI ymls) | ✅ Complete (2026-07-23) |
-| Phase 1 | Backend Core + MCP Client + Rule Engine | ◆ Planned (5 plans written, not started) |
-| Phase 2 | Frontend + Integration + Agent Extension Pack (conditional) | ❌ Blocked on Phase 1 |
-| Phase 3 | Testing + Containerization + CI + Semgrep | ❌ Blocked on Phase 1 |
-| Phase 4 | Security/Audit/DevOps Hardening + Deploy | ❌ Blocked on Phases 1, 3 |
-| Phase 5 | Decision Model (operator-requested, not graded) | ❌ Blocked on Phase 1; must not delay Phases 3–4 |
+| Phase 1 | Backend Core + MCP Client + Rule Engine | ✅ Done 2026-10-16 (`9b844f6`, #2); MCP-005 is a stub, #21 |
+| Phase 2 | Frontend + Integration + Agent Extension Pack (conditional) | ✅ Done 2026-10-16 (`22fecd4`, #3) |
+| Phase 3 | Testing + Containerization + CI + Semgrep | ✅ Done 2026-10-16 (`a9610a6`, #5); Semgrep runs by hand, not in CI |
+| Phase 4 | Security/Audit/DevOps Hardening + Deploy | ✅ Done 2026-10-16 (`5dfab96`, #10) |
+| Phase 5 | Decision Model (operator-requested, not graded) | Not started (#12) |
 
 **Phase 1 plans:**
 - Plan 1.1: Project scaffold + DB (not started)

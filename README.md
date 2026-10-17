@@ -34,13 +34,13 @@ to it.
 # Full stack
 docker compose up --build
 
-# All tests, one command (backend 114 + oncall 38 + frontend 26 = 178)
+# All tests, one command (backend 116 + oncall 38 + frontend 32 = 186)
 make test
 
 # Backend only
 cd backend && uv sync && uv run pytest -v
 
-# Frontend tests (26)
+# Frontend tests (32)
 cd frontend && npm install && npm test
 
 # Smoke test (proves the scanner works)
@@ -55,6 +55,10 @@ Local ports (all bound to 127.0.0.1 by `docker-compose.yml`):
 | Backend API | http://127.0.0.1:8000/api/health |
 | Grafana (LGTM) | http://127.0.0.1:3001 |
 | On-call agent | http://127.0.0.1:8080 |
+
+The local stack sets `ALLOW_ARBITRARY_STDIO=true`, so the backend runs any
+stdio command you submit, as the container user; that is why every port is
+bound to 127.0.0.1.
 
 ## Key documents
 
@@ -86,12 +90,24 @@ Every endpoint gets an HTTP server span from the FastAPI OpenTelemetry instrumen
 | POST | `/api/scans` | Submit a scan target (stdio or HTTP), returns scan ID |
 | GET | `/api/scans` | List scans, newest first |
 | GET | `/api/scans/{id}` | Scan status and metadata |
-| GET | `/api/scans/{id}/report` | Findings report (409 if not yet completed) |
+| GET | `/api/scans/{id}/report` | Findings report; for a failed scan, the error and no findings (409 while pending or running) |
 | GET | `/api/scans/{id}/diff/{other_id}` | Diff findings between two scans of the same target |
 | GET/POST/DELETE | `/api/admin/faults[/scan-failure]` | Fault injection to trigger the alert. Needs `Authorization: Bearer $ADMIN_TOKEN`; 404 when `ADMIN_TOKEN` is unset |
 
 `openapi.yaml` also defines `GET /api/scans/{id}/verdict` (Phase 5 decision
 model). It is not implemented yet; see issue #12.
+
+Example request (the bundled fixture; works locally and on the deployed
+services):
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/api/scans \
+  -H 'Content-Type: application/json' \
+  -d '{"target": {"name": "demo", "transport": "stdio", "command": "vulnerable-demo"}}'
+```
+
+The response is the new scan with its `id` and `status: "pending"`; poll
+`GET /api/scans/{id}` until `completed`, then read `/api/scans/{id}/report`.
 
 **Target types:**
 - **stdio:** in public mode, `command` must be a bundled fixture name (`vulnerable-demo`) with no `args`. Any command runs only when `ALLOW_ARBITRARY_STDIO=true` (set in `docker-compose.yml` for local use; never set it in a deployed environment).
@@ -142,8 +158,10 @@ scripts/trigger-alert.sh               # inject scan failures; alert fires in ab
 scripts/trigger-alert.sh --off
 ```
 
-Without `OTEL_EXPORTER_OTLP_ENDPOINT` (tests, the Render deploy) nothing is
-exported and only the JSON logs are written.
+Without `OTEL_EXPORTER_OTLP_ENDPOINT` (unit tests, local runs outside
+Docker) nothing is exported and only the JSON logs are written. The Render
+services set it and send to Grafana Cloud; see "Two destinations" in
+`ops/observability.md`.
 
 ## On-call agent
 
@@ -172,14 +190,14 @@ Details: `docs/oncall-agent.md`. Runbook: `ops/runbooks/scan-failure-rate.md`.
 
 ## Test coverage
 
-**178 tests, all passing** (`make test`, 2026-10-16).
+**186 tests, all passing** (`make test`, 2026-10-17).
 
 | Layer | Count | What |
 |---|---|---|
-| Backend unit tests | 98 | Models, config, DB URL, scan repository, health, MCP client, 10 rules, consent, diff service, telemetry (trace IDs, redaction, metrics), admin fault API |
-| Backend integration tests | 16 | MCP client enumerate (3), rule engine (2), scan flow (9), persistence across restart (2) |
+| Backend unit tests | 99 | Models, config, DB URL and engine pool, scan repository, health, MCP client, 10 rules, consent, diff service, telemetry (trace IDs, redaction, metrics), admin fault API |
+| Backend integration tests | 17 | MCP client enumerate (3), rule engine (2), scan flow (9), persistence across restart and failed-scan report (3) |
 | On-call agent tests | 38 | Webhook app, agent loop and runbook fallback, LLM client, tool allowlist (`oncall/tests/`) |
-| Frontend unit tests | 26 | API client (8), NewScanPage (5), ScansPage (3), ScanReportPage (5), ScanDiffPage (5) |
+| Frontend unit tests | 32 | API client (8), NewScanPage (6), ScansPage (3), ScanReportPage (10), ScanDiffPage (5) |
 | Smoke test | 1 | Standalone: full scan → report → findings against stub fixture server |
 
 ```bash
@@ -233,10 +251,13 @@ hook, then waits until `/api/health` reports that SHA as `version`.
 
 - **Dev:** every green CI run on `main` builds the image and deploys it to
   dev automatically.
-- **Prod:** Actions -> Deploy -> Run workflow, environment `prod`. The
-  GitHub environment `prod` needs a reviewer to approve the run.
+- **Prod:** Actions -> [Deploy](https://github.com/cjbischoff/mcp-security-posture-scanner/actions/workflows/deploy.yml)
+  -> Run workflow, environment `prod`. The GitHub environment `prod` needs
+  a reviewer to approve the run. Because prod is deployed by hand, it can
+  lag `main`; `/api/health` reports the deployed commit as `version`.
 - **Rollback:** run the same workflow by hand with an earlier commit SHA as
-  the tag.
+  the tag. Tested on dev (runs 38979968207, 38980090745); not yet on prod
+  (issue #26).
 - **URLs:**
   - Prod: https://scanner-prod.onrender.com
   - Dev: https://scanner-dev-4o95.onrender.com

@@ -24,10 +24,14 @@ Planned system architecture (Phase 0 — updated as implementation lands).
   metrics, and logs over OTLP/HTTP to `lgtm`. Grafana alerting posts
   `ScanFailureRateHigh` to the `oncall` webhook. See `ops/observability.md`
   and `ops/alerts.md`.
-- **CI/CD** — GitHub Actions: `ci.yml` lints and runs unit + integration
-  tests on every push/PR; `deploy.yml` deploys on merge to main after CI
-  passes; `security-scan.yml` (Phase 3) runs Semgrep incl. the custom
-  `no-llm-on-untrusted-mcp-data` rule.
+- **CI/CD** — GitHub Actions: `.github/workflows/ci.yml` lints and runs backend unit +
+  integration tests, oncall tests, frontend type check, tests, and build, and
+  `docker compose build`, on every PR and push to main; `.github/workflows/deploy.yml` deploys
+  to dev after CI passes on main, and to prod only by a manual run with
+  approval. Semgrep (standard rule packs and the custom rules in
+  `security/semgrep/rules/`, including `no-llm-on-untrusted-mcp-data`) does
+  not run in CI; it runs by hand in the `security/` container, and its
+  results are committed in `security/semgrep/`.
 
 ## Scan flow
 

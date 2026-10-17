@@ -105,8 +105,42 @@ See `openapi.yaml` (contract-first). Summary:
 - `GET /api/scans/{id}` — status
 - `GET /api/scans/{id}/report` — findings report
 - `GET /api/scans/{id}/diff/{other_id}` — diff/drift between two scans
-- `GET /api/scans/{id}/verdict` — allow/review/block verdict *(Phase 5)*
-- `GET /api/health` — liveness
+- `GET /api/scans/{id}/verdict` — allow/review/block verdict *(Phase 5, in
+  the contract only, not implemented; issue #12)*
+- `GET /api/health` — liveness, build version, request `trace_id`
+- `GET /api/metrics` — in-process JSON snapshot (scan, finding, and rule
+  totals, request counts, scan durations)
+- `GET /api/admin/faults`, `POST`/`DELETE /api/admin/faults/scan-failure` —
+  fault injection to trigger the alert; needs `Authorization: Bearer
+  $ADMIN_TOKEN`, returns 404 when `ADMIN_TOKEN` is unset
+
+## Acceptance criteria
+
+Added 2026-10-17, after the code was written. This spec and `openapi.yaml`
+date from 2026-07-23 (commit `fe2731a`) and predate the code; the criteria
+below were written later to make the core flows testable. Per-task criteria
+and their status live in
+[GitHub Issues](https://github.com/cjbischoff/mcp-security-posture-scanner/issues).
+"Open" means a known gap, with the tracking issue.
+
+| # | Flow | Criterion | Status (2026-10-17) |
+|---|---|---|---|
+| AC-1 | Submit scan | `POST /api/scans` with a valid target returns 201 with a scan `id` and status `pending`; the scan runs in the background and reaches `completed` or `failed` | Met |
+| AC-2 | Submit scan | An invalid body (for example `transport: http` with no `url`, an empty or very long `name`, a NUL byte) returns 422, never 201 or 500 | Open: #23 |
+| AC-3 | Enumerate only | The MCP client sends only `initialize`, `notifications/initialized`, `tools/list`, `resources/list`, `prompts/list`; no code path sends `tools/call` | Met |
+| AC-4 | Rules | Each of the 10 rules (MCP-001..010) is one module with a unit test that fails if the rule stops firing on a known-bad input | Open: MCP-005 never fires, #21 |
+| AC-5 | Report | `GET /api/scans/{id}/report` for a completed scan of `vulnerable-demo` returns findings with rule ID, severity, title, description, remediation, and subject; 404 for an unknown scan | Met |
+| AC-6 | Report | The report returns 409 only while a scan is `pending`/`running`; the UI shows a failed scan's error and polls until the scan finishes | Met (PR #27, #18) |
+| AC-7 | Diff/drift | `GET /api/scans/{a}/diff/{b}` for two completed scans of the same target returns added, removed, and unchanged findings plus drift findings (MCP-010); scans of different targets return 409 | Met; UI "Compare with" links added in PR #27 |
+| AC-8 | Consent | A non-localhost HTTP target without `allow_external: true` returns 422; with it, the flag is stored on the target record | Met |
+| AC-9 | Public mode | Without `ALLOW_ARBITRARY_STDIO=true`, a stdio `command` other than a bundled fixture name (`vulnerable-demo`), or any `args`, returns 422 | Met |
+| AC-10 | Persistence | Targets, scans, findings, and the enumeration snapshot survive a backend restart, a database restart, and `docker compose down`/`up` | Met |
+| AC-11 | Persistence | The first request after the database drops idle connections returns 2xx | Fixed in PR #16; prod check open, #19 |
+| AC-12 | Observability | One scan has one trace with `scan.execute`, `mcp.connect`, `mcp.enumerate`, `rules.run`; the same `trace_id` is in the JSON logs (Loki); scan metrics are in Prometheus; locally in the LGTM container, deployed in Grafana Cloud | Met |
+| AC-13 | Observability | No target name, command, args, URL, tool text, or raw error text in logs, spans, or metrics (unit test) | Met for logs and metrics; span URLs keep query strings, #22 |
+| AC-14 | Alert | `ScanFailureRateHigh` fires when more than 50% of scans fail over 5 minutes (at least 3 scans) and posts to the on-call webhook; `scripts/trigger-alert.sh` fires it in about 2 minutes | Met |
+| AC-15 | On-call | On the alert, the on-call agent diagnoses with its fixed tool allowlist, clears only an active known fault, verifies recovery, and writes an incident report; with no known fault it reports `needs_human`; it never receives scan target data | Open: clears the fault unconditionally, #25 |
+| AC-16 | On-call | `/alert` rejects requests without a shared secret | Open: #25 |
 
 ## Tech stack
 

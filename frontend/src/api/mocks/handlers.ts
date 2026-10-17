@@ -3,6 +3,7 @@ import {
   mockScan1,
   mockScan2,
   mockPendingScan,
+  mockFailedScan,
   mockReport,
   mockDiff,
 } from './data'
@@ -49,6 +50,7 @@ export const handlers = [
   http.get('/api/scans/:id/report', ({ params }) => {
     const id = Number(params.id)
     if (id === 3) return HttpResponse.json({ detail: 'Scan not finished yet' }, { status: 409 })
+    if (id === 9) return HttpResponse.json({ scan: mockFailedScan, findings: [], summary: {} })
     if (id === 1 || id === 2) return HttpResponse.json(mockReport)
     return HttpResponse.json({ detail: 'Scan not found' }, { status: 404 })
   }),

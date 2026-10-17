@@ -59,7 +59,8 @@ export default function NewScanPage() {
         </label></div>
         {transport === 'stdio' ? (
           <>
-            <div><label>Command: <input value={command} onChange={e => setCommand(e.target.value)} disabled={loading} /></label></div>
+            <div><label>Command: <input value={command} onChange={e => setCommand(e.target.value)} placeholder="e.g. vulnerable-demo" disabled={loading} /></label></div>
+            <p style={{ color: '#666', fontSize: '0.9em', margin: '2px 0' }}>Public deployments only accept the built-in fixture <code>vulnerable-demo</code>.</p>
             <div><label>Args: <input value={args} onChange={e => setArgs(e.target.value)} placeholder="space-separated" disabled={loading} /></label></div>
           </>
         ) : (

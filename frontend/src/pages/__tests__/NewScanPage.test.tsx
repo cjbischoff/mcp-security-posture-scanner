@@ -47,4 +47,9 @@ describe('NewScanPage', () => {
     renderPage()
     expect(screen.getByRole('button', { name: /start scan/i })).toBeInTheDocument()
   })
+
+  it('hints that the fixture command is vulnerable-demo', () => {
+    renderPage()
+    expect(screen.getByLabelText(/command/i)).toHaveAttribute('placeholder', expect.stringMatching(/vulnerable-demo/))
+  })
 })

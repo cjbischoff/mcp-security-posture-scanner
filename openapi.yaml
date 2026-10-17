@@ -242,24 +242,37 @@ components:
     ScanTargetCreate:
       type: object
       required: [name, transport]
+      description: >
+        Every string rejects NUL and other control characters (422).
+        http transport requires url; stdio transport requires command.
       properties:
         name:
           type: string
-          description: Human-friendly label for the target server
+          minLength: 1
+          maxLength: 200
+          pattern: '^[^\x00-\x1f\x7f]*$'
+          description: Human-friendly label for the target server (whitespace stripped)
         transport:
           type: string
           enum: [stdio, http]
         command:
           type: string
-          description: Executable for stdio transport
+          maxLength: 1000
+          pattern: '^[^\x00-\x1f\x7f]*$'
+          description: Executable for stdio transport (required for stdio)
         args:
           type: array
+          maxItems: 50
           items:
             type: string
+            maxLength: 1000
+            pattern: '^[^\x00-\x1f\x7f]*$'
           description: Arguments for stdio transport
         url:
           type: string
-          description: URL for http transport (localhost only unless allow_external)
+          maxLength: 2048
+          pattern: '^[^\x00-\x1f\x7f]*$'
+          description: URL for http transport (required for http; localhost only unless allow_external)
         allow_external:
           type: boolean
           default: false

@@ -230,18 +230,21 @@ def list_scans() -> list[dict]:
 
 
 def get_report(scan_id: int) -> dict | None:
-    """Build the findings report for a completed scan.
+    """Build the findings report for a finished (completed or failed) scan.
+
+    A failed scan yields a report with no findings; its ``scan.status`` and
+    ``scan.error`` tell the UI why.
 
     Args:
         scan_id: Scan primary key.
 
     Returns:
         ``{"scan", "findings", "summary"}``, or None if the scan is missing
-        or not completed (the router tells 404 from 409).
+        or still pending/running (the router tells 404 from 409).
     """
     with database.SessionLocal() as session:
         scan = repo.get_scan(session, scan_id)
-        if scan is None or scan.status != ScanStatus.COMPLETED:
+        if scan is None or scan.status not in (ScanStatus.COMPLETED, ScanStatus.FAILED):
             return None
         findings = _findings(scan)
         summary: dict[str, int] = {}

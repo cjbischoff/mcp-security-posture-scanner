@@ -58,12 +58,14 @@ paths:
   /scans/{scan_id}/report:
     get:
       operationId: getScanReport
-      summary: Findings report for a completed scan
+      summary: Findings report for a finished scan
       parameters:
         - $ref: '#/components/parameters/ScanId'
       responses:
         '200':
-          description: Report
+          description: >-
+            Report. For a failed scan, scan.status is "failed", scan.error
+            holds the reason, and findings is empty.
           content:
             application/json:
               schema:
@@ -71,7 +73,7 @@ paths:
         '404':
           description: Not found
         '409':
-          description: Scan not finished yet
+          description: Scan still pending or running
   /scans/{scan_id}/diff/{other_id}:
     get:
       operationId: diffScans

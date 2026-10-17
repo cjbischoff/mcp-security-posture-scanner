@@ -96,7 +96,8 @@ Telemetry stays on the host: the collector and its storage run in the local
 
 ## Without a collector
 
-If `OTEL_EXPORTER_OTLP_ENDPOINT` is unset (unit tests, the Render deploy),
+If `OTEL_EXPORTER_OTLP_ENDPOINT` is unset (unit tests, or a Render service
+without the Grafana Cloud settings),
 spans and metrics are still created in process so trace IDs exist, but
 nothing is exported and nothing extra is printed. Logs still go to stderr as
 JSON.
@@ -108,3 +109,69 @@ JSON.
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://lgtm:4318` | OTLP/HTTP collector; unset = no export |
 | `OTEL_SERVICE_NAME` | `scanner-backend` | `service.name`, becomes `service_name`/`job` labels |
 | `OTEL_METRIC_EXPORT_INTERVAL` | `10000` | Metric export period in ms (SDK default 60000) |
+
+## Two destinations: local and Grafana Cloud
+
+The backend code is the same in both places. Only the environment decides
+where telemetry goes. The OTel SDK reads `OTEL_EXPORTER_OTLP_ENDPOINT` and
+`OTEL_EXPORTER_OTLP_HEADERS` itself.
+
+| Where it runs | Telemetry goes to | Set by |
+|---|---|---|
+| `docker compose up` (local) | `lgtm` container, Grafana at http://127.0.0.1:3001 | `docker-compose.yml` |
+| Render dev and prod | Grafana Cloud (one stack for both) | Render service env vars |
+| Unit tests, any env without the endpoint | Nowhere (no export) | unset |
+
+### Grafana Cloud setup (once)
+
+1. In the Grafana Cloud stack: **Connections → OpenTelemetry (OTLP)**. Copy
+   the OTLP endpoint, the instance ID, and create a token with write scopes.
+2. On each Render service, set:
+
+   | Env var | Value |
+   |---|---|
+   | `OTEL_EXPORTER_OTLP_ENDPOINT` | `https://otlp-gateway-prod-<region>.grafana.net/otlp` |
+   | `OTEL_EXPORTER_OTLP_HEADERS` | `Authorization=Basic%20<base64 of instanceID:token>` |
+   | `OTEL_SERVICE_NAME` | `scanner-backend` |
+   | `OTEL_RESOURCE_ATTRIBUTES` | `deployment.environment=dev` or `=prod` |
+
+   Make the header value with
+   `printf 'Basic %s' "$(printf '%s:%s' "$ID" "$TOKEN" | base64)" | sed 's/ /%20/'`.
+   Never commit it.
+3. Create a service account (**Administration → Service accounts**, role
+   Editor) with a token, then push the dashboard and the alert rule:
+
+   ```bash
+   GRAFANA_URL=https://<stack>.grafana.net GRAFANA_SA_TOKEN=<token> ops/grafana/push-to-cloud.sh
+   ```
+
+   The script finds the stack's own data source UIDs, so the same
+   `ops/grafana/` files serve both destinations. Running it again updates
+   them in place.
+
+### Limits
+
+- In Grafana Cloud the alert goes to the stack's default notification policy
+  (email to the account owner). The on-call agent runs only in local
+  Compose, so the alert → agent → fix loop is demonstrated locally.
+- Dev and prod share one stack. The alert and dashboard sum both
+  environments; filter by `deployment_environment` in Explore.
+- Grafana Cloud free tier: 14-day retention, 10k active metric series,
+  50 GB/month each of logs and traces (checked 2026-10-16,
+  https://grafana.com/pricing/).
+
+### Automated setup (used for this project)
+
+`ops/cloud-setup.sh` does steps 1-3 through the Grafana Cloud and Render APIs.
+It reads `GRAFANA_CLOUD_TOKEN` (Cloud access policy token, scopes
+`stacks:read` + `accesspolicies:read/write/delete`), `GRAFANA_SA_TOKEN`,
+`GRAFANA_STACK`, and `RENDER_API_KEY` from `.env`, and prints no secrets.
+It creates a `scanner-otlp` policy (write-only telemetry scopes), makes a new
+OTLP token, tests it with one span, merges the `OTEL_*` vars into each Render
+service (other vars stay), redeploys the running SHA, and pushes the dashboard
+and alert. Running it again rotates the OTLP token and deletes the old one.
+
+`ops/cloud-verify.sh` sends one scan to dev and prod and queries Grafana Cloud.
+Verified 2026-10-17: traces `97a8c6b7…` (dev) and `c0cfc3a7…` (prod) in Tempo,
+`scanner_scans_total` per `deployment_environment` in Prometheus, and Loki
+lines carrying the same trace IDs.

@@ -29,3 +29,4 @@ coverage/
 # on-call incident reports (one sample is force-added)
 ops/incidents/*
 !ops/incidents/.gitkeep
+.env.tmp

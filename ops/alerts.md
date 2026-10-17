@@ -51,7 +51,7 @@ Read from the running LGTM Prometheus on 2026-10-16
 
 ```bash
 docker compose up --build -d
-scripts/trigger-alert.sh        # fault on + 6 vulnerable-demo scans, 2s apart
+scripts/trigger-alert.sh        # fault on + 12 vulnerable-demo scans, 2s apart
 scripts/trigger-alert.sh --off  # fault off
 ```
 
@@ -72,3 +72,12 @@ Verified 2026-10-16: trigger at 22:19:09Z, rule `Pending` at 22:19:10Z,
 `Alerting` at 22:20:10Z (value 1.0), active in Alertmanager with receiver
 `oncall-webhook`, and the `oncall` service logged `POST /alert 202` at
 22:20:20Z.
+
+**Timing depends on recent traffic.** The rule fires only when failed scans
+are more than half of all scans in the last 5 minutes. Good scans run just
+before the trigger count too. On 2026-10-16 23:26Z, 6 good scans plus 6
+failed scans gave a ratio of exactly 0.5, so the rule went `Pending` only
+after the good scans left the window (+193 s) and `Firing` at +254 s. The
+on-call agent then cleared the fault in 10 s (incident
+`20261016T233020Z-ScanFailureRateHigh-704e0d`). The script now sends 12
+scans by default so a demo does not wait for that.

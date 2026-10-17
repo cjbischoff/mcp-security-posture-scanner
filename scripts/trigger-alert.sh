@@ -15,7 +15,7 @@ if [ "${1:-}" = "--off" ]; then
   exit 0
 fi
 
-N="${1:-6}"
+N="${1:-12}"  # must outnumber recent good scans: the rule needs >50% failed over 5m
 curl -fsS -X POST -H "$AUTH" "$API/api/admin/faults/scan-failure"; echo
 for i in $(seq 1 "$N"); do
   curl -fsS -o /dev/null -w "scan $i/$N submitted: HTTP %{http_code}\n" \

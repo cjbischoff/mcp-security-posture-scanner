@@ -78,7 +78,7 @@ Developer evaluating an MCP server before adoption:
 | MCP-002 | Unconstrained input schema on sensitive-looking parameters (shell/path/URL, no pattern/format/enum) | High |
 | MCP-003 | Missing `readOnlyHint`/`destructiveHint` annotations | Medium |
 | MCP-004 | Read capability + network/write capability pairing (confused-deputy signal) | High |
-| MCP-005 | Unauthenticated HTTP transport | High |
+| MCP-005 | Unauthenticated HTTP transport (inactive: not registered until the HTTP transport exists, #21) | High |
 | MCP-006 | Overly broad resource URI patterns (wildcards, root paths) | Medium |
 | MCP-007 | Tool description length/entropy anomaly (potential hidden payload) | Medium |
 | MCP-008 | Missing or malformed schema on required parameters | Medium |
@@ -128,7 +128,7 @@ and their status live in
 | AC-1 | Submit scan | `POST /api/scans` with a valid target returns 201 with a scan `id` and status `pending`; the scan runs in the background and reaches `completed` or `failed` | Met |
 | AC-2 | Submit scan | An invalid body (for example `transport: http` with no `url`, an empty or very long `name`, a NUL byte) returns 422, never 201 or 500 | Open: #23 |
 | AC-3 | Enumerate only | The MCP client sends only `initialize`, `notifications/initialized`, `tools/list`, `resources/list`, `prompts/list`; no code path sends `tools/call` | Met |
-| AC-4 | Rules | Each of the 10 rules (MCP-001..010) is one module with a unit test that fails if the rule stops firing on a known-bad input | Open: MCP-005 never fires, #21 |
+| AC-4 | Rules | Each of the 9 active rules is one module with a unit test that fails if the rule stops firing on a known-bad input; MCP-005 is not registered until the HTTP transport exists | Met (#21) |
 | AC-5 | Report | `GET /api/scans/{id}/report` for a completed scan of `vulnerable-demo` returns findings with rule ID, severity, title, description, remediation, and subject; 404 for an unknown scan | Met |
 | AC-6 | Report | The report returns 409 only while a scan is `pending`/`running`; the UI shows a failed scan's error and polls until the scan finishes | Met (PR #27, #18) |
 | AC-7 | Diff/drift | `GET /api/scans/{a}/diff/{b}` for two completed scans of the same target returns added, removed, and unchanged findings plus drift findings (MCP-010); scans of different targets return 409 | Met; UI "Compare with" links added in PR #27 |

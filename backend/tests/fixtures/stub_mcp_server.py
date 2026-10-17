@@ -166,8 +166,8 @@ async def main():
 
 
 # Exact (rule_id, subject) pairs the stub server triggers. MCP-003 does not
-# fire (every stub tool sets both hints); MCP-005 and MCP-010 need target or
-# diff context, so they do not fire on a snapshot alone.
+# fire (every stub tool sets both hints); MCP-010 needs two scans, so it does not
+# fire on a snapshot alone. MCP-005 is not registered (#21).
 EXPECTED_FINDINGS = {
     ("MCP-001", "injected_tool"),
     ("MCP-002", "injected_tool"),

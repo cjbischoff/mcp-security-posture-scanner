@@ -40,10 +40,11 @@ def metrics():
     """
     from app.services.scan_service import list_scans as get_scans
     from app.metrics import get_enhanced_metrics
+    from app.rules.registry import RULES
 
     scans = get_scans()
     finding_count = sum(s.get("finding_count", 0) for s in scans)
-    rule_count = 10
+    rule_count = len(RULES)
 
     result = {
         "scan_count_total": len(scans),

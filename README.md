@@ -18,7 +18,8 @@ to it.
 - You submit a target (a bundled fixture server, or a local stdio/HTTP
   server) in the web UI or with `POST /api/scans`.
 - The scanner connects as an MCP client, lists tools, resources, and prompts,
-  and runs 10 deterministic rules (MCP-001..010) on the metadata.
+  and runs 9 active deterministic rules on the metadata (MCP-005 waits for
+  the HTTP transport).
 - You get a findings report with severity, evidence, and remediation, and
   you can diff two scans of the same target to catch description drift.
 - Expected behavior: a scan of the bundled `vulnerable-demo` fixture
@@ -113,7 +114,10 @@ The response is the new scan with its `id` and `status: "pending"`; poll
 - **stdio:** in public mode, `command` must be a bundled fixture name (`vulnerable-demo`) with no `args`. Any command runs only when `ALLOW_ARBITRARY_STDIO=true` (set in `docker-compose.yml` for local use; never set it in a deployed environment).
 - **HTTP:** provide `url`. Non-localhost URLs require `allow_external: true`. The API accepts HTTP targets, but the MCP client supports only stdio today, so an HTTP scan ends as `failed` (see Future work).
 
-## v1 rule set (10 deterministic rules)
+## v1 rule set (9 active deterministic rules)
+
+MCP-005 is written down but not registered: it needs the HTTP transport,
+which is not built, so it would never fire (#21).
 
 | ID | Check | Severity |
 |---|---|---|
@@ -121,7 +125,7 @@ The response is the new scan with its `id` and `status: "pending"`; poll
 | MCP-002 | Unconstrained input schema on sensitive params (command/path/url/shell, no pattern/format/enum) | High |
 | MCP-003 | Missing `readOnlyHint`/`destructiveHint` annotations | Medium |
 | MCP-004 | Read + write capability pairing (confused-deputy signal) | High |
-| MCP-005 | Unauthenticated HTTP transport | High |
+| MCP-005 | Unauthenticated HTTP transport (inactive until the HTTP transport exists) | High |
 | MCP-006 | Overly broad resource URI patterns (wildcards, root paths) | Medium |
 | MCP-007 | Tool description length/entropy anomaly (>2000 chars or entropy >5.5) | Medium |
 | MCP-008 | Missing or malformed schema on required parameters | Medium |

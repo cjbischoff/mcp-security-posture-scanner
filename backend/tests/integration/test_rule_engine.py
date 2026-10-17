@@ -1,7 +1,7 @@
 """
 Integration tests for the rule engine.
 
-Runs all 10 rules against a snapshot from the stub fixture MCP server
+Runs all 9 active rules against a snapshot from the stub fixture MCP server
 and verifies known-vulnerable patterns are detected.
 """
 import sys

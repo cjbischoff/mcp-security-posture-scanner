@@ -14,7 +14,10 @@ apps=("$@"); [ $# -eq 0 ] && apps=(https://scanner-dev-4o95.onrender.com https:/
 
 gf() { local p=$1; shift; curl -fsS -G -H "Authorization: Bearer $GRAFANA_SA_TOKEN" "$GRAFANA_URL/api/datasources/proxy/uid/$p" "$@"; }
 ds=$(curl -fsS -H "Authorization: Bearer $GRAFANA_SA_TOKEN" "$GRAFANA_URL/api/datasources")
-uid() { jq -r --arg t "$1" '[.[] | select(.type == $t)] | (map(select(.name | startswith("grafanacloud-"))) + .) | .[0].uid' <<<"$ds"; }
+uid() { jq -r --arg t "$1" '[.[] | select(.type == $t)]
+  | (map(select(.uid | IN("grafanacloud-prom", "grafanacloud-logs", "grafanacloud-traces")))
+     + map(select(.name | startswith("grafanacloud-")) | select(.name | test("alert-state-history|usage") | not))
+     + .) | .[0].uid' <<<"$ds"; }
 prom=$(uid prometheus); loki=$(uid loki); tempo=$(uid tempo)
 
 for app in "${apps[@]}"; do

@@ -18,7 +18,11 @@ api() { curl -fsS -H "Authorization: Bearer $GRAFANA_SA_TOKEN" -H "Content-Type:
 # preferring Grafana Cloud's own (names start with "grafanacloud-").
 ds=$(api "$GRAFANA_URL/api/datasources")
 uid_for() {
-  jq -r --arg t "$1" '[.[] | select(.type == $t)] | (map(select(.name | startswith("grafanacloud-"))) + .) | .[0].uid // empty' <<<"$ds"
+  # Grafana Cloud's standard UIDs first; skip its alert-history/usage Loki and Prom sources
+  jq -r --arg t "$1" '[.[] | select(.type == $t)]
+    | (map(select(.uid | IN("grafanacloud-prom", "grafanacloud-logs", "grafanacloud-traces")))
+       + map(select(.name | startswith("grafanacloud-")) | select(.name | test("alert-state-history|usage") | not))
+       + .) | .[0].uid // empty' <<<"$ds"
 }
 prom=$(uid_for prometheus); loki=$(uid_for loki); tempo=$(uid_for tempo)
 [ -n "$prom" ] || { echo "No Prometheus data source found" >&2; exit 1; }

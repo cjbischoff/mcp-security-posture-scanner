@@ -265,8 +265,10 @@ hook, then waits until `/api/health` reports that SHA as `version`.
   a reviewer to approve the run. Because prod is deployed by hand, it can
   lag `main`; `/api/health` reports the deployed commit as `version`.
 - **Rollback:** run the same workflow by hand with an earlier commit SHA as
-  the tag. Tested on dev (runs 38979968207, 38980090745); not yet on prod
-  (issue #26).
+  the tag. Tested on dev (runs 38979968207, 38980090745).
+  Drilled on prod 2026-10-17 (runs 39047623170 and 39063223640). A rollback
+  is safe only to a SHA with the same Alembic migrations; across a migration,
+  downgrade the schema first.
 - **URLs:**
   - Prod: https://scanner-prod.onrender.com
   - Dev: https://scanner-dev-4o95.onrender.com

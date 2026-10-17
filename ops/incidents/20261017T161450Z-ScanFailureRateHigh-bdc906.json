@@ -1,0 +1,89 @@
+{
+  "id": "20261017T161450Z-ScanFailureRateHigh-bdc906",
+  "alert": {
+    "status": "firing",
+    "alertname": "ScanFailureRateHigh",
+    "service": "scanner-backend",
+    "severity": "page",
+    "starts_at": "2026-10-17T16:14:40Z",
+    "values": {
+      "A": 1.0,
+      "B": 1.0
+    },
+    "summary": "More than half of scans failed in the last 5 minutes"
+  },
+  "started_at": "2026-10-17T16:14:50.024801+00:00",
+  "mode": "runbook",
+  "fallback_reason": null,
+  "steps": [
+    {
+      "tool": "get_alert",
+      "args": {},
+      "result": {
+        "status": "firing",
+        "alertname": "ScanFailureRateHigh",
+        "service": "scanner-backend",
+        "severity": "page",
+        "starts_at": "2026-10-17T16:14:40Z",
+        "values": {
+          "A": 1.0,
+          "B": 1.0
+        },
+        "summary": "More than half of scans failed in the last 5 minutes"
+      },
+      "by": "runbook"
+    },
+    {
+      "tool": "query_metrics",
+      "args": {
+        "name": "scan_failure_ratio"
+      },
+      "result": {
+        "name": "scan_failure_ratio",
+        "values": [
+          1.0
+        ]
+      },
+      "by": "runbook"
+    },
+    {
+      "tool": "get_faults",
+      "args": {},
+      "result": {
+        "active": []
+      },
+      "by": "runbook"
+    },
+    {
+      "tool": "check_health",
+      "args": {},
+      "result": {
+        "ok": true,
+        "http_status": 200,
+        "status": "ok",
+        "version": "dev"
+      },
+      "by": "runbook"
+    }
+  ],
+  "summary": "",
+  "verification": null,
+  "outcome": "needs_human",
+  "diagnosis": {
+    "health": {
+      "ok": true,
+      "http_status": 200,
+      "status": "ok",
+      "version": "dev"
+    },
+    "active_faults": [],
+    "failure_ratio": [
+      1.0
+    ]
+  },
+  "reason": "no active fault to clear, so nothing was changed; a human must find the cause",
+  "finished_at": "2026-10-17T16:14:50.038977+00:00",
+  "issue": {
+    "skipped": "GITHUB_TOKEN or GITHUB_REPOSITORY not set"
+  }
+}

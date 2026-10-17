@@ -17,6 +17,7 @@ def test_runbook_without_llm_clears_fault_and_writes_report(config, client, worl
     assert report["outcome"] == "resolved"
     assert world.faults["scan-failure"] is False
     assert [s["tool"] for s in report["steps"]][-1] == "clear_fault"
+    assert report["verification"]["scan"]["status"] == "completed"
     md = Path(config.incidents_dir) / f"{report['id']}.md"
     assert md.exists() and "ScanFailureRateHigh" in md.read_text()
     saved = json.loads((Path(config.incidents_dir) / f"{report['id']}.json").read_text())
@@ -83,21 +84,6 @@ def test_llm_never_sees_target_data(llm_config, client, world):
         assert marker not in sent
 
 
-def test_verify_reports_unresolved_when_fault_stays(config, client, world):
-    world.sticky_faults = True
-    report = respond(grafana_payload(), config, client)
-    assert report["outcome"] == "unresolved"
-    assert report["verification"]["active_faults"] == ["scan-failure"]
-
-
-def test_verify_reports_unresolved_when_unhealthy(config, client, world):
-    world.healthy = False
-    report = respond(grafana_payload(), config, client)
-    assert report["outcome"] == "unresolved"
-    # Unresolved after the runbook -> it tried the (unconfigured) redeploy.
-    assert report["steps"][-1]["tool"] == "redeploy"
-
-
 def test_resolved_alert_takes_no_action(config, client, world):
     report = respond(grafana_payload(status="resolved"), config, client)
     assert report["outcome"] == "alert_resolved"
@@ -108,3 +94,62 @@ def test_unknown_alert_runs_diagnostics_only(config, client, world):
     report = respond(grafana_payload(alertname="DiskFull"), config, client)
     assert report["outcome"] == "needs_human"
     assert deletes(world) == []
+
+
+def test_verify_reports_fix_failed_when_fault_stays(config, client, world):
+    world.sticky_faults = True
+    report = respond(grafana_payload(), config, client)
+    assert report["outcome"] == "fix_failed"
+    assert report["verification"]["active_faults"] == ["scan-failure"]
+
+
+def test_verify_reports_fix_failed_when_unhealthy(config, client, world):
+    world.healthy = False
+    report = respond(grafana_payload(), config, client)
+    assert report["outcome"] == "fix_failed"
+    # Not fixed after the runbook -> it tried the (unconfigured) redeploy.
+    assert report["steps"][-1]["tool"] == "redeploy"
+
+
+def test_verify_scan_that_fails_is_fix_failed(config, client, world):
+    world.scan_result = "failed"
+    report = respond(grafana_payload(), config, client)
+    assert world.faults["scan-failure"] is False
+    assert report["verification"]["scan"]["status"] == "failed"
+    assert report["outcome"] == "fix_failed"
+
+
+def test_verify_scan_that_never_finishes_is_fix_failed(config, client, world):
+    world.scan_result = "running"
+    report = respond(grafana_payload(), config, client, sleep=lambda s: None)
+    assert report["verification"]["scan"]["status"] == "timeout"
+    assert report["outcome"] == "fix_failed"
+
+
+def test_no_active_fault_needs_human_and_never_clears(config, client, world):
+    world.faults["scan-failure"] = False
+    report = respond(grafana_payload(), config, client)
+    assert report["outcome"] == "needs_human"
+    assert deletes(world) == []
+    assert "clear_fault" not in [s["tool"] for s in report["steps"]]
+    assert report["diagnosis"]["active_faults"] == []
+    assert report["diagnosis"]["health"]["ok"] is True
+    assert report["diagnosis"]["failure_ratio"] == [0.83]
+    assert "no active fault" in report["reason"]
+    md = (Path(config.incidents_dir) / f"{report['id']}.md").read_text()
+    assert "no active fault" in md and "needs_human" in md
+
+
+def test_llm_clear_fault_without_active_fault_is_rejected(llm_config, client, world):
+    world.faults["scan-failure"] = False
+    world.llm_replies = [
+        tool_call("clear_fault", {"name": "scan-failure"}),
+        {"role": "assistant", "content": "Cleared it."},
+    ]
+    report = respond(grafana_payload(), llm_config, client)
+    assert deletes(world) == []
+    assert report["steps"][0]["result"]["cleared"] is None
+    assert "not active" in report["steps"][0]["result"]["rejected"]
+    # The model saw the rejection, and no fix was claimed.
+    assert "not active" in world.llm_bodies[1]["messages"][-1]["content"]
+    assert report["outcome"] == "needs_human"

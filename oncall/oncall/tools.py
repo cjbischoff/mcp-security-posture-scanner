@@ -10,6 +10,7 @@ finding text) cannot reach the LLM even if a backend response contained it.
 import math
 import os
 import re
+import time
 from dataclasses import dataclass, fields
 
 import httpx
@@ -29,6 +30,10 @@ NAMED_QUERIES = {
 
 # Fault flags the agent may clear.
 CLEARABLE_FAULTS = {"scan-failure"}
+
+# The scan the agent runs to prove recovery: the bundled stdio fixture.
+VERIFY_SCAN = {"target": {"name": "oncall-verify", "transport": "stdio",
+                          "command": "vulnerable-demo"}}
 
 
 class ToolError(Exception):
@@ -54,6 +59,10 @@ class Config:
         github_repository: ``owner/repo`` for GitHub calls.
         rollback_tag: Known-good image tag (commit SHA) for ``rollback``.
         rollback_environment: ``deploy.yml`` environment input.
+        oncall_webhook_token: Shared secret Grafana sends as
+            ``Authorization: Bearer <token>`` (``ONCALL_WEBHOOK_TOKEN``).
+            Empty means every ``/alert`` request is rejected.
+        verify_scan_timeout: Seconds to wait for the verification scan.
     """
 
     scanner_url: str = "http://backend:8000"
@@ -70,6 +79,8 @@ class Config:
     github_repository: str = ""
     rollback_tag: str = ""
     rollback_environment: str = "prod"
+    oncall_webhook_token: str = ""
+    verify_scan_timeout: float = 60.0
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -251,13 +262,58 @@ class Tools:
                 "version": str(body.get("version", ""))[:64]}
 
     def clear_fault(self, name: str) -> dict:
-        """Disable an injected fault via ``DELETE /api/admin/faults/{name}``."""
+        """Disable an injected fault via ``DELETE /api/admin/faults/{name}``.
+
+        Refuses unless ``get_faults`` lists the fault as active right now, so
+        neither the model nor the runbook can claim a fix for a fault that
+        was never on.
+
+        Args:
+            name: Fault name from :data:`CLEARABLE_FAULTS`.
+
+        Returns:
+            ``{"cleared": name, "http_status"}`` on success, or
+            ``{"cleared": None, ...}`` with ``rejected`` or ``error``.
+        """
+        if name not in (self.get_faults().get("active") or []):
+            return {"cleared": None, "rejected": f"fault {name} is not active"}
         try:
             r = self.client.delete(f"{self.config.scanner_url}/api/admin/faults/{name}",
                                    headers=self._admin_headers(), timeout=10)
         except httpx.HTTPError as e:
             return {"cleared": None, "error": type(e).__name__}
         return {"cleared": name if r.is_success else None, "http_status": r.status_code}
+
+    def verify_scan(self, sleep=time.sleep, interval: float = 2) -> dict:
+        """Run one fixture scan through the public API and wait for it.
+
+        Not on the model allowlist: the agent calls it during verification.
+        Only the scan id and status are kept (never ``error`` text).
+
+        Args:
+            sleep: Sleep function (injected in tests).
+            interval: Seconds between status polls.
+
+        Returns:
+            ``{"id", "status"}`` where status is ``completed``, ``failed``,
+            ``timeout``, or ``error`` (transport or HTTP failure).
+        """
+        base = f"{self.config.scanner_url}/api/scans"
+        sid = None
+        try:
+            r = self.client.post(base, json=VERIFY_SCAN, timeout=10)
+            r.raise_for_status()
+            sid = int(r.json()["id"])
+            for _ in range(max(1, int(self.config.verify_scan_timeout / interval))):
+                r = self.client.get(f"{base}/{sid}", timeout=10)
+                r.raise_for_status()
+                status = r.json().get("status")
+                if status in ("completed", "failed"):
+                    return {"id": sid, "status": status}
+                sleep(interval)
+        except (httpx.HTTPError, ValueError, KeyError, TypeError) as e:
+            return {"id": sid, "status": "error", "error": type(e).__name__}
+        return {"id": sid, "status": "timeout"}
 
     def redeploy(self) -> dict:
         """Restart the service via the Render deploy hook (same image)."""

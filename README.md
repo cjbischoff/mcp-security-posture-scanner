@@ -35,7 +35,7 @@ to it.
 # Full stack
 docker compose up --build
 
-# All tests, one command (backend 116 + oncall 38 + frontend 32 = 186)
+# All tests, one command (backend 131 + oncall 46 + frontend 32 = 209)
 make test
 
 # Backend only
@@ -170,9 +170,14 @@ services set it and send to Grafana Cloud; see "Two destinations" in
 ## On-call agent
 
 The `oncall` service (`oncall/`) is the responder for the `ScanFailureRateHigh`
-alert. Grafana posts the alert to `http://oncall:8080/alert`; the agent reads
-the fault flags, health, and failure ratio, clears the injected fault, waits,
-verifies, and writes an incident report to `ops/incidents/<id>.md` and `.json`.
+alert. Grafana posts the alert to `http://oncall:8080/alert` with a shared
+secret (`ONCALL_WEBHOOK_TOKEN`; any other request gets 401). The agent reads
+the fault flags, health, and failure ratio. It clears the injected fault only
+if one is active; otherwise it changes nothing and reports `needs_human` with
+the diagnosis. After a fix it verifies with one real fixture scan through
+`POST /api/scans`: `resolved` only if that scan completes, health is ok, and
+no fault is active, else `fix_failed`. Reports go to `ops/incidents/<id>.md`
+and `.json`.
 
 - **LLM optional:** any OpenAI-compatible provider via `LLM_BASE_URL`,
   `LLM_API_KEY`, `LLM_MODEL`. With no key, or on any invalid tool call or
@@ -187,20 +192,20 @@ verifies, and writes an incident report to `ops/incidents/<id>.md` and `.json`.
 docker compose up --build -d backend db lgtm oncall
 scripts/trigger-alert.sh      # or see docs/oncall-agent.md for a manual payload
 ls ops/incidents/
-cd oncall && uv run pytest    # 38 tests
+cd oncall && uv run pytest    # 46 tests
 ```
 
 Details: `docs/oncall-agent.md`. Runbook: `ops/runbooks/scan-failure-rate.md`.
 
 ## Test coverage
 
-**201 tests, all passing** (`make test`, 2026-10-17).
+**209 tests, all passing** (`make test`, 2026-10-17).
 
 | Layer | Count | What |
 |---|---|---|
 | Backend unit tests | 114 | Models, config, DB URL and engine pool, scan repository, health, MCP client, 9 active rules, consent, scan input validation, diff service, telemetry (trace IDs, redaction, query-string stripping, health not traced, metrics), admin fault API |
 | Backend integration tests | 17 | MCP client enumerate (3), rule engine (2), scan flow (9), persistence across restart and failed-scan report (3) |
-| On-call agent tests | 38 | Webhook app, agent loop and runbook fallback, LLM client, tool allowlist (`oncall/tests/`) |
+| On-call agent tests | 46 | Webhook app and token auth, agent loop and runbook fallback, verification scan, LLM client, tool allowlist (`oncall/tests/`) |
 | Frontend unit tests | 32 | API client (8), NewScanPage (6), ScansPage (3), ScanReportPage (10), ScanDiffPage (5) |
 | Smoke test | 1 | Standalone: full scan → report → findings against stub fixture server |
 

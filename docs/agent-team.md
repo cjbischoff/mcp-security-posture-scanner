@@ -97,13 +97,14 @@ comments are posted with the operator's `gh` credentials, so they show the opera
 ### Merges
 
 Merges to `main` are made from the operator's account (`cjbischoff`;
-`gh pr list --state merged --json number,mergedBy`). On 2026-10-17 `main`
-had no branch protection (`gh api
-repos/cjbischoff/mcp-security-posture-scanner/branches/main/protection`
-returned 404 "Branch not protected"), so the rule "only the operator merges"
-was a working rule, not something GitHub enforced. Once branch protection is
-turned on (issue
-[#20](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/20)),
-GitHub will require a pull request and green CI. The `prod` environment
+`gh pr list --state merged --json number,mergedBy`). Until 2026-10-17 `main` had no branch protection, so "only the operator
+merges" was a working rule. Since 2026-10-17 GitHub enforces it: `main`
+requires a pull request and green `backend`, `frontend`, `oncall` and
+`compose-build` checks, and blocks force pushes and deletion (`gh api
+repos/cjbischoff/mcp-security-posture-scanner/branches/main/protection`;
+issue [#20](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/20)).
+No approving review is required, because the operator is the only
+maintainer and GitHub does not count self-approval. Admins are not
+enforced, so the operator can still bypass in an emergency. The `prod` environment
 needs an approval, but its only reviewer is the operator and self-review is
 allowed.

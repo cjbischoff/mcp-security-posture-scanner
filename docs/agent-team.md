@@ -11,7 +11,7 @@ Tracker: [GitHub Issues](https://github.com/cjbischoff/mcp-security-posture-scan
 
 | Role | Who / tool | Responsibilities | Inputs | Outputs | Permissions and limits |
 |---|---|---|---|---|---|
-| Human operator | Project owner | Decides scope and trade-offs (hosting, LLM approach), reviews and merges PRs, approves prod deploys | Audit reports, PRs, CI results, questions from the orchestrator | Decisions, merges to `main`, prod approvals | Only the operator merges to `main`. The GitHub environment `prod` has required reviewers |
+| Human operator | Project owner | Decides scope and trade-offs (hosting, LLM approach), reviews and merges PRs, approves prod deploys | Audit reports, PRs, CI results, questions from the orchestrator | Decisions, merges to `main`, prod approvals | Only the operator merges to `main` (a working rule; see Merges below). The GitHub environment `prod` has a required reviewer |
 | Orchestrator | Claude Code main session | Audits the repo, writes contracts (metric names, API shapes, file ownership), opens and maintains issues, writes builder prompts, runs verification itself (`make test`, CI), commits and pushes, asks the operator for decisions | Brief, `CLAUDE.md`, `openapi.yaml`, issues, subagent reports | Issues with acceptance criteria, subagent prompts, verified commits, PRs, tracker comments | Never pushes to `main`; never merges; asks before scope changes |
 | Builder | Claude Code general-purpose subagent, one per work stream ([`.claude/agents/builder.md`](../.claude/agents/builder.md)) | Implements one issue test-first; comments evidence on the issue | Written prompt: issue number, contracts, owned files, TDD rule, verification commands | Tests and code in its owned files, verification output, issue comment | Edits only its owned files. Builders run in parallel only when file ownership does not overlap |
 | Auditor | Claude Code subagent, read-only ([`.claude/agents/auditor.md`](../.claude/agents/auditor.md)) | Repo vs spec consistency review, CI and scaffold review, rubric scoring audits | Repo, brief Section 9, rubric | Findings with `file:line` evidence | Read-only tools; no edits, commits, or pushes |
@@ -73,10 +73,37 @@ flowchart TD
 | Docs and tracker | Orchestrator | [#11](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/11) | This file, `task-tracker.md`, README |
 | Planning | GSD roles | — | `.planning/ROADMAP.md`, `.planning/phases/` |
 
-Issues #2-#6 were opened when the tracker moved to GitHub Issues, after
-that work was already committed (core scanner in PR
-[#1](https://github.com/cjbischoff/mcp-security-posture-scanner/pull/1),
-persistence just before), and were closed with evidence comments.
-From #7 on, the commits reference their issues
-(`git log --grep "#"`). Issue comments are posted with the operator's
-`gh` credentials, so they show the operator's account.
+### How the tracker was used (timestamps)
+
+Times are UTC, from `gh issue list --state all --json number,createdAt,closedAt`
+and `git log --format='%h %aI %s'`.
+
+| Issues | Opened | Their commits | What this shows |
+|---|---|---|---|
+| #2-#6 | 2026-10-16 22:12:01-22:12:06 | 19:13:03 (`9b844f6`, `22fecd4`, one batch), 21:59:09 (`a3513bb`, `00c9eb9`), 22:08:20 (`36d3453`) | Back-filled. Each issue was closed 20-30 seconds after it was opened, with an evidence comment. The work came first. |
+| #7-#10 | 2026-10-16 22:12:35-22:12:40 | #7-#9: one batch at 22:23:32-22:25:04 (`58e4b7c` to `ce6365f`). #10: `45923ef` (22:04:31) and `668eb91` (22:10:18) before the issue, `5f8a9a8` (22:55:17) after | Mostly back-filled. The verification comments on #7-#9 record working runs at 22:19-22:20, 7-8 minutes after the issues were opened, so most of the code existed before them. The issues were written while the work was finishing, not before it started. |
+| #11, #12 | 2026-10-16 22:12:42-22:12:43 | #11: 22:31:48. #12: spec only (`f802f9b`, 2026-10-15) | #11 came before its commits. #12 is the open Phase 5 backlog item. |
+| #14 | 2026-10-16 23:19:20 | 23:19:27 (`b62af72`) to 2026-10-17 14:05:47 (`a48d5b9`) | Opened 7 seconds before its first commit; the later commits reference it. |
+| #18-#26 | 2026-10-17 | PRs #16, #17, #27 | Opened from the 2026-10-17 adversarial review. #18-#20 record PRs #27, #16, and #17; #16 and #17 merged before these issues were opened. #21-#26 are backlog. |
+
+All issues #2-#12 were opened within 43 seconds of each other, when the
+tracker moved to GitHub Issues. Commits `58e4b7c` (2026-10-16) through
+`a48d5b9` (2026-10-17) reference their issues (`git log --grep "#"`). The
+2026-10-17 fix commits in PRs #16, #17, and #27 (`be1ca1b`, `47cacb7`,
+`56800c6`, `b6f2d2f`, `8fbcfc4`) do not reference an issue; #18-#20 were
+opened while those PRs were in flight or after they merged. Issue
+comments are posted with the operator's `gh` credentials, so they show the operator's account.
+
+### Merges
+
+Merges to `main` are made from the operator's account (`cjbischoff`;
+`gh pr list --state merged --json number,mergedBy`). On 2026-10-17 `main`
+had no branch protection (`gh api
+repos/cjbischoff/mcp-security-posture-scanner/branches/main/protection`
+returned 404 "Branch not protected"), so the rule "only the operator merges"
+was a working rule, not something GitHub enforced. Once branch protection is
+turned on (issue
+[#20](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/20)),
+GitHub will require a pull request and green CI. The `prod` environment
+needs an approval, but its only reviewer is the operator and self-review is
+allowed.

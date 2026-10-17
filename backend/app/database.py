@@ -50,7 +50,9 @@ def configure(url: str) -> Engine:
         The new engine.
     """
     global engine
-    engine = create_engine(normalize_database_url(url))
+    # pool_pre_ping: Neon drops idle connections when its compute suspends;
+    # test each pooled connection before use instead of failing the request.
+    engine = create_engine(normalize_database_url(url), pool_pre_ping=True)
     SessionLocal.configure(bind=engine)
     return engine
 

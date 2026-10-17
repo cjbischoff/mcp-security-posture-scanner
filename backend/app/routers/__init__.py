@@ -15,8 +15,8 @@ def health(request: Request):
         request: The incoming request (unused).
 
     Returns:
-        status, build version, and the full 32-hex trace_id of this request,
-        so a caller can look the request up in Tempo.
+        status, build version, and trace_id. Health checks are excluded
+        from tracing (see ``setup_telemetry``), so trace_id is normally None.
     """
     from opentelemetry import trace
 

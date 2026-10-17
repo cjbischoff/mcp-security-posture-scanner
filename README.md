@@ -85,7 +85,7 @@ Every endpoint gets an HTTP server span from the FastAPI OpenTelemetry instrumen
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/api/health` | Liveness check; returns the request's full 32-hex `trace_id` |
+| GET | `/api/health` | Liveness check and build version; not traced, so `trace_id` is `null` |
 | GET | `/api/metrics` | In-process JSON snapshot: scan/finding totals, request counts, scan durations |
 | POST | `/api/scans` | Submit a scan target (stdio or HTTP), returns scan ID |
 | GET | `/api/scans` | List scans, newest first |

@@ -105,4 +105,28 @@ def setup_telemetry(app: FastAPI) -> None:
         set_logger_provider(logger_provider)
         root.addHandler(LoggingHandler(logger_provider=logger_provider))
 
-    FastAPIInstrumentor.instrument_app(app)
+    FastAPIInstrumentor.instrument_app(
+        app,
+        server_request_hook=_strip_query,
+        # Health checks (Render, compose) would bury scan traces in Tempo search
+        excluded_urls=os.environ.get("OTEL_PYTHON_FASTAPI_EXCLUDED_URLS", "api/health"),
+    )
+
+
+def _strip_query(span: trace.Span, scope: dict) -> None:
+    """Overwrite the server span's URL attributes so they hold no query string.
+
+    The query string can carry user data. ``http.route`` (the template)
+    is left as is.
+
+    Args:
+        span: The server span the FastAPI instrumentation just started.
+        scope: The ASGI scope of the request.
+    """
+    if not span.is_recording():
+        return
+    path = scope.get("path", "")
+    span.set_attribute("http.target", path)
+    url = span.attributes.get("http.url") if hasattr(span, "attributes") else None
+    if url:
+        span.set_attribute("http.url", url.split("?", 1)[0])

@@ -20,8 +20,8 @@ the trace in Tempo.
 
 ## Find one request in all three signals
 
-1. Get a trace ID. Every JSON log line has one, and so does
-   `curl -s localhost:8000/api/health` (that request's own trace):
+1. Get a trace ID. Every JSON log line written inside a request or scan has
+   one (`/api/health` is not traced, so its `trace_id` is `null`):
 
    ```bash
    docker compose logs backend | grep '"scan completed"' | tail -1
@@ -87,6 +87,14 @@ schemas, and raw error text (it can quote the command or server output).
   events or status descriptions. The span status description is the category.
 - HTTP spans hold method, route, status code, and peer address. Request
   bodies and headers (including `Authorization`) are not captured.
+- `http.url` and `http.target` are rewritten without the query string (a
+  `server_request_hook` in `app/observability.py`); `http.route` keeps the
+  route template. Test: `test_span_urls_drop_query_string`.
+- `/api/health` is not traced (`OTEL_PYTHON_FASTAPI_EXCLUDED_URLS`, default
+  `api/health`), so Render health checks do not bury scan traces. Test:
+  `test_health_creates_no_trace`.
+- uvicorn runs with `--no-access-log`: its access log prints the raw path
+  with the query string. The app's JSON logs are kept.
 - Test: `tests/unit/test_telemetry.py::test_failed_scan_keeps_target_data_out_of_telemetry`
   submits a scan whose command and args hold secret-looking strings and
   asserts that no log record or span contains them.

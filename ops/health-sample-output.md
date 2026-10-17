@@ -13,8 +13,8 @@ Captured from the local Docker Compose stack on 2026-10-16, after a few
 }
 ```
 
-`trace_id` is the full 32-hex W3C trace ID of the health request. Paste it
-into Grafana > Explore > Tempo to see that request's trace.
+Captured before #22. Health checks are no longer traced, so `trace_id` is
+now `null`; take a trace ID from a scan log line instead.
 
 ## /api/metrics
 

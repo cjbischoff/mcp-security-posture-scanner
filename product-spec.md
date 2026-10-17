@@ -107,7 +107,7 @@ See `openapi.yaml` (contract-first). Summary:
 - `GET /api/scans/{id}/diff/{other_id}` — diff/drift between two scans
 - `GET /api/scans/{id}/verdict` — allow/review/block verdict *(Phase 5, in
   the contract only, not implemented; issue #12)*
-- `GET /api/health` — liveness, build version, request `trace_id`
+- `GET /api/health` — liveness, build version (not traced; `trace_id` is null)
 - `GET /api/metrics` — in-process JSON snapshot (scan, finding, and rule
   totals, request counts, scan durations)
 - `GET /api/admin/faults`, `POST`/`DELETE /api/admin/faults/scan-failure` —

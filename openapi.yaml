@@ -141,7 +141,7 @@ paths:
                     type: string
                     nullable: true
                     pattern: '^[0-9a-f]{32}$'
-                    description: Full W3C trace ID of this request, to look it up in Tempo
+                    description: Null, because /api/health is excluded from tracing (OTEL_PYTHON_FASTAPI_EXCLUDED_URLS)
   /metrics:
     get:
       operationId: metrics

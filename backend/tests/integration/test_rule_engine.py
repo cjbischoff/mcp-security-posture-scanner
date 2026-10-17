@@ -8,6 +8,8 @@ import sys
 import pytest
 from pathlib import Path
 
+from tests.fixtures.stub_mcp_server import EXPECTED_FINDINGS as FIXTURE_FINDINGS
+
 FIXTURE_PATH = Path(__file__).resolve().parent.parent / "fixtures" / "stub_mcp_server.py"
 
 
@@ -23,50 +25,28 @@ async def test_rule_engine_detects_fixture_vulnerabilities():
         snapshot = await client.enumerate()
 
         findings = run_all_rules(snapshot)
-        rule_ids = {f["rule_id"] for f in findings}
-
-        # The stub server has known vulnerabilities that should trigger:
-        # MCP-001: injected_tool has injection in description
-        assert "MCP-001" in rule_ids, "MCP-001 should fire on injected_tool description"
-
-        # MCP-002: injected_tool has unconstrained 'command' param
-        assert "MCP-002" in rule_ids, "MCP-002 should fire on unconstrained schema"
-
-        # MCP-003: injected_tool has readOnlyHint=False, destructiveHint=False (both present)
-        # Actually the stub sets both hints, so MCP-003 should NOT fire for injected_tool
-        # But echo_tool might not have annotations... let's check
-
-        # MCP-004: read_write_tool has read params + write params across tools
-        # injected_tool has 'command' (not in READ_PARAMS exactly), read_write_tool has source_path/target_url
-        # This depends on exact READ/WRITE param sets
-
-        # MCP-006: config_wildcard has uri with '**'
-        assert "MCP-006" in rule_ids, "MCP-006 should fire on wildcard resource URI"
-
-        # MCP-009: analyze prompt has injection pattern in description
-        assert "MCP-009" in rule_ids, "MCP-009 should fire on prompt injection"
-
-        # MCP-010 is diff-only, won't fire here
-
-        # Log all findings for debugging
-        print(f"\nFindings ({len(findings)}):")
-        for f in findings:
-            print(f"  {f['rule_id']} ({f['severity']}): {f['subject'] or '(global)'}")
+        assert {(f["rule_id"], f["subject"]) for f in findings} == FIXTURE_FINDINGS
+        assert len(findings) == len(FIXTURE_FINDINGS)
 
     finally:
         await client.close()
 
 
-@pytest.mark.asyncio
-async def test_orchestrator_deduplicates():
-    """Orchestrator deduplicates same (rule_id, subject) pairs."""
+def test_orchestrator_deduplicates(monkeypatch):
+    """Duplicate (rule_id, subject) pairs from rules collapse to one finding each."""
+    from app.rules import finding, registry
     from app.rules.orchestrator import run_all_rules
-    from app.mcp_client.models import MCPTool, MCPSnapshot
+    from app.mcp_client.models import MCPSnapshot
 
-    snapshot = MCPSnapshot(tools=[
-        MCPTool(name="t1", input_schema={"type": "object"}),
-    ])
+    class Dup:
+        def check(self, snapshot):
+            return [
+                finding("X-1", "low", "t", "d", "r", subject="a"),
+                finding("X-1", "low", "t", "d", "r", subject="a"),
+                finding("X-1", "low", "t", "d", "r", subject="b"),
+                finding("X-2", "low", "t", "d", "r", subject="a"),
+            ]
 
-    findings = run_all_rules(snapshot)
-    # Should not crash, dedupe works
-    assert isinstance(findings, list)
+    monkeypatch.setattr(registry, "RULES", [Dup(), Dup()])
+    pairs = [(f["rule_id"], f["subject"]) for f in run_all_rules(MCPSnapshot())]
+    assert sorted(pairs) == [("X-1", "a"), ("X-1", "b"), ("X-2", "a")]

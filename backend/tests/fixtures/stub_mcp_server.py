@@ -165,6 +165,19 @@ async def main():
         )
 
 
+# Exact (rule_id, subject) pairs the stub server triggers. MCP-003 does not
+# fire (every stub tool sets both hints); MCP-005 and MCP-010 need target or
+# diff context, so they do not fire on a snapshot alone.
+EXPECTED_FINDINGS = {
+    ("MCP-001", "injected_tool"),
+    ("MCP-002", "injected_tool"),
+    ("MCP-004", None),
+    ("MCP-006", "config_wildcard"),
+    ("MCP-006", "specific_config"),
+    ("MCP-009", "analyze"),
+}
+
+
 if __name__ == "__main__":
     import anyio
     anyio.run(main, backend="asyncio")

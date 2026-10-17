@@ -6,7 +6,7 @@ uvicorn in the container), not created here.
 import os
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from app import models  # noqa: F401 -- registers models on Base.metadata
 from app.routers import router as api_router
@@ -30,6 +30,8 @@ def mount_frontend(target: FastAPI, static_dir: str) -> None:
     @target.get("/{path:path}", include_in_schema=False)
     def spa(path: str) -> FileResponse:
         """Return a static file, or index.html for client-side routes."""
+        if path == "api" or path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="Not Found")
         file = (root / path).resolve()
         if path and file.is_file() and file.is_relative_to(root):
             return FileResponse(file)

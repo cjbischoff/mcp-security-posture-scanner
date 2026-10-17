@@ -81,6 +81,30 @@ class FaultInjected(Exception):
     """Raised by a scan while the admin ``scan_failure`` fault is on."""
 
 
+def user_error(exc: BaseException) -> str:
+    """Return the error text shown to the user for a failed scan.
+
+    Some exceptions carry no message (``str(TimeoutError())`` is empty), so
+    the API would show an empty error. Those get the exception type and a
+    short explanation instead.
+
+    Args:
+        exc: The exception that failed the scan.
+
+    Returns:
+        A non-empty, human-readable error message.
+
+    Example:
+        >>> user_error(TimeoutError())
+        'TimeoutError: the target did not respond in time'
+    """
+    if str(exc):
+        return str(exc)
+    if isinstance(exc, TimeoutError):
+        return "TimeoutError: the target did not respond in time"
+    return f"{type(exc).__name__}: no error message"
+
+
 def error_category(exc: BaseException, phase: str) -> str:
     """Map a scan failure to a fixed category that is safe for telemetry.
 
@@ -191,7 +215,7 @@ async def _execute_scan(scan_id: int, target_data: dict) -> None:
             category = error_category(e, phase)
             session.rollback()
             scan.status = ScanStatus.FAILED
-            scan.error = str(e)  # user-facing only; never sent to telemetry
+            scan.error = user_error(e)  # user-facing only; never sent to telemetry
             scan.finished_at = datetime.now(timezone.utc)
             session.commit()
 

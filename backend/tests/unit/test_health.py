@@ -36,3 +36,16 @@ def test_static_dir_serves_spa(tmp_path):
     assert "spa" in c.get("/").text
     assert "spa" in c.get("/scans/7").text
     assert c.get("/api/health").json() == {"status": "ok"}
+
+
+def test_static_dir_unknown_api_path_is_404(tmp_path):
+    """The SPA catch-all must not answer unknown /api paths with index.html."""
+    from app.main import mount_frontend
+    from fastapi import FastAPI
+
+    (tmp_path / "index.html").write_text("<html>spa</html>")
+    spa = FastAPI()
+    mount_frontend(spa, str(tmp_path))
+    resp = TestClient(spa).get("/api/scans/1/verdict")
+    assert resp.status_code == 404
+    assert "spa" not in resp.text

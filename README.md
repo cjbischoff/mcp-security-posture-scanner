@@ -194,11 +194,11 @@ Details: `docs/oncall-agent.md`. Runbook: `ops/runbooks/scan-failure-rate.md`.
 
 ## Test coverage
 
-**186 tests, all passing** (`make test`, 2026-10-17).
+**201 tests, all passing** (`make test`, 2026-10-17).
 
 | Layer | Count | What |
 |---|---|---|
-| Backend unit tests | 99 | Models, config, DB URL and engine pool, scan repository, health, MCP client, 10 rules, consent, diff service, telemetry (trace IDs, redaction, metrics), admin fault API |
+| Backend unit tests | 114 | Models, config, DB URL and engine pool, scan repository, health, MCP client, 9 active rules, consent, scan input validation, diff service, telemetry (trace IDs, redaction, query-string stripping, health not traced, metrics), admin fault API |
 | Backend integration tests | 17 | MCP client enumerate (3), rule engine (2), scan flow (9), persistence across restart and failed-scan report (3) |
 | On-call agent tests | 38 | Webhook app, agent loop and runbook fallback, LLM client, tool allowlist (`oncall/tests/`) |
 | Frontend unit tests | 32 | API client (8), NewScanPage (6), ScansPage (3), ScanReportPage (10), ScanDiffPage (5) |

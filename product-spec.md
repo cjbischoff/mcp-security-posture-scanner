@@ -126,7 +126,7 @@ and their status live in
 | # | Flow | Criterion | Status (2026-10-17) |
 |---|---|---|---|
 | AC-1 | Submit scan | `POST /api/scans` with a valid target returns 201 with a scan `id` and status `pending`; the scan runs in the background and reaches `completed` or `failed` | Met |
-| AC-2 | Submit scan | An invalid body (for example `transport: http` with no `url`, an empty or very long `name`, a NUL byte) returns 422, never 201 or 500 | Open: #23 |
+| AC-2 | Submit scan | An invalid body (for example `transport: http` with no `url`, an empty or very long `name`, a NUL byte) returns 422, never 201 or 500 | Met (#23) |
 | AC-3 | Enumerate only | The MCP client sends only `initialize`, `notifications/initialized`, `tools/list`, `resources/list`, `prompts/list`; no code path sends `tools/call` | Met |
 | AC-4 | Rules | Each of the 9 active rules is one module with a unit test that fails if the rule stops firing on a known-bad input; MCP-005 is not registered until the HTTP transport exists | Met (#21) |
 | AC-5 | Report | `GET /api/scans/{id}/report` for a completed scan of `vulnerable-demo` returns findings with rule ID, severity, title, description, remediation, and subject; 404 for an unknown scan | Met |
@@ -137,7 +137,7 @@ and their status live in
 | AC-10 | Persistence | Targets, scans, findings, and the enumeration snapshot survive a backend restart, a database restart, and `docker compose down`/`up` | Met |
 | AC-11 | Persistence | The first request after the database drops idle connections returns 2xx | Fixed in PR #16; prod check open, #19 |
 | AC-12 | Observability | One scan has one trace with `scan.execute`, `mcp.connect`, `mcp.enumerate`, `rules.run`; the same `trace_id` is in the JSON logs (Loki); scan metrics are in Prometheus; locally in the LGTM container, deployed in Grafana Cloud | Met |
-| AC-13 | Observability | No target name, command, args, URL, tool text, or raw error text in logs, spans, or metrics (unit test) | Met for logs and metrics; span URLs keep query strings, #22 |
+| AC-13 | Observability | No target name, command, args, URL, tool text, or raw error text in logs, spans, or metrics (unit test) | Met (#22: span URLs drop the query string, health checks are not traced) |
 | AC-14 | Alert | `ScanFailureRateHigh` fires when more than 50% of scans fail over 5 minutes (at least 3 scans) and posts to the on-call webhook; `scripts/trigger-alert.sh` fires it in about 2 minutes | Met |
 | AC-15 | On-call | On the alert, the on-call agent diagnoses with its fixed tool allowlist, clears only an active known fault, verifies recovery, and writes an incident report; with no known fault it reports `needs_human`; it never receives scan target data | Open: clears the fault unconditionally, #25 |
 | AC-16 | On-call | `/alert` rejects requests without a shared secret | Open: #25 |

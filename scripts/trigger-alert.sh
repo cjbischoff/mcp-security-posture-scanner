@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Fire ScanFailureRateHigh: turn on the scan-failure fault, then submit scans.
-# Usage: scripts/trigger-alert.sh [N]   (default 6 scans)
+# Usage: scripts/trigger-alert.sh [N]   (default 12 scans)
 #        scripts/trigger-alert.sh --off (turn the fault off again)
 # Env: API (default http://127.0.0.1:8000), ADMIN_TOKEN (default: .env, else local-admin-token)
 set -euo pipefail

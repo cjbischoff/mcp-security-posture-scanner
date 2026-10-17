@@ -53,7 +53,7 @@ their work was done; see the timestamps in
 | [#23](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/23) | Backend: validate scan input (http without url, name length, NUL byte returns 500) | Closed; PR #29 | — |
 | [#24](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/24) | Tests: tighten weak assertions, fail polling loops on timeout, no public-host URLs | Closed; PR #29 | — |
 | [#25](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/25) | On-call: clear a fault only if it is active, and authenticate /alert | Closed; PR #30 | — |
-| [#26](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/26) | CD: run a prod rollback drill | Open, backlog | — |
+| [#26](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/26) | CD: run a prod rollback drill | Closed; prod rollback run 39047623170 → `ae229fc`, roll-forward run 39063223640 → `d59093c` | — |
 
 Earlier phase plans (before the move to GitHub Issues) are in
 [`.planning/`](../.planning/).

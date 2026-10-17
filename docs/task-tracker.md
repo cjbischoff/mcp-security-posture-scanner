@@ -45,14 +45,14 @@ their work was done; see the timestamps in
 | [#11](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/11) | Docs: agent team spec, tracker evidence, README matches reality | Closed (PR #13) | `4da9a04`, `94ec19e`, `ae2e2e8`, `d91154f` |
 | [#12](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/12) | Phase 5: decision-model verdict endpoint | Open, backlog (not graded) | `f802f9b` (spec only) |
 | [#14](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/14) | Observability: send deployed telemetry to Grafana Cloud, keep local LGTM | Closed (PR #15) | `b62af72`, `bbb5122`, `510193c`, `9e7d158`, `a48d5b9` |
-| [#18](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/18) | UI: failed scan error, report polling, diff link | Open; fixed in PR #27, prod deploy pending | `b6f2d2f`, `8fbcfc4` (PR #27) |
-| [#19](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/19) | Backend: reconnect after idle DB (pool_pre_ping) | Open; fixed in PR #16, prod check pending | `be1ca1b`, `47cacb7` (PR #16) |
-| [#20](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/20) | CI/CD: block fork workflow_run deploys, SHA-pin actions, protect main | Open; PR #17 merged, branch protection on 2026-10-17; prod self-review still allowed | `56800c6` (PR #17) |
-| [#21](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/21) | Rule MCP-005 is dead code: implement it or drop it from the rule count | Open, backlog | — |
-| [#22](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/22) | Observability: strip query strings from span URLs, drop health-check traces | Open, backlog | — |
-| [#23](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/23) | Backend: validate scan input (http without url, name length, NUL byte returns 500) | Open, backlog | — |
-| [#24](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/24) | Tests: tighten weak assertions, fail polling loops on timeout, no public-host URLs | Open, backlog | — |
-| [#25](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/25) | On-call: clear a fault only if it is active, and authenticate /alert | Open, backlog | — |
+| [#18](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/18) | UI: failed scan error, report polling, diff link | Closed; PR #27, verified on prod `82e6f42` | `b6f2d2f`, `8fbcfc4` (PR #27) |
+| [#19](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/19) | Backend: reconnect after idle DB (pool_pre_ping) | Closed; PR #16, verified on prod (201 after 7 idle min) | `be1ca1b`, `47cacb7` (PR #16) |
+| [#20](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/20) | CI/CD: block fork workflow_run deploys, SHA-pin actions, protect main | Closed; PR #17 + branch protection; prod self-review accepted (sole maintainer) | `56800c6` (PR #17) |
+| [#21](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/21) | Rule MCP-005 is dead code: implement it or drop it from the rule count | Closed; PR #29 (MCP-005 unregistered, 9 active rules) | — |
+| [#22](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/22) | Observability: strip query strings from span URLs, drop health-check traces | Closed; PR #29 | — |
+| [#23](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/23) | Backend: validate scan input (http without url, name length, NUL byte returns 500) | Closed; PR #29 | — |
+| [#24](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/24) | Tests: tighten weak assertions, fail polling loops on timeout, no public-host URLs | Closed; PR #29 | — |
+| [#25](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/25) | On-call: clear a fault only if it is active, and authenticate /alert | Closed; PR #30 | — |
 | [#26](https://github.com/cjbischoff/mcp-security-posture-scanner/issues/26) | CD: run a prod rollback drill | Open, backlog | — |
 
 Earlier phase plans (before the move to GitHub Issues) are in

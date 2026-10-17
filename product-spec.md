@@ -139,8 +139,8 @@ and their status live in
 | AC-12 | Observability | One scan has one trace with `scan.execute`, `mcp.connect`, `mcp.enumerate`, `rules.run`; the same `trace_id` is in the JSON logs (Loki); scan metrics are in Prometheus; locally in the LGTM container, deployed in Grafana Cloud | Met |
 | AC-13 | Observability | No target name, command, args, URL, tool text, or raw error text in logs, spans, or metrics (unit test) | Met (#22: span URLs drop the query string, health checks are not traced) |
 | AC-14 | Alert | `ScanFailureRateHigh` fires when more than 50% of scans fail over 5 minutes (at least 3 scans) and posts to the on-call webhook; `scripts/trigger-alert.sh` fires it in about 2 minutes | Met |
-| AC-15 | On-call | On the alert, the on-call agent diagnoses with its fixed tool allowlist, clears only an active known fault, verifies recovery, and writes an incident report; with no known fault it reports `needs_human`; it never receives scan target data | Open: clears the fault unconditionally, #25 |
-| AC-16 | On-call | `/alert` rejects requests without a shared secret | Open: #25 |
+| AC-15 | On-call | On the alert, the on-call agent diagnoses with its fixed tool allowlist, clears only an active known fault, verifies recovery, and writes an incident report; with no known fault it reports `needs_human`; it never receives scan target data | Met (#25: clears only an active fault, verifies with a fixture scan, `needs_human` otherwise) |
+| AC-16 | On-call | `/alert` rejects requests without a shared secret | Met (#25: Bearer `ONCALL_WEBHOOK_TOKEN`, 401 otherwise) |
 
 ## Tech stack
 

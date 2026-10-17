@@ -156,3 +156,21 @@ export const mockDiff: ScanDiff = {
     },
   ],
 }
+
+export const mockFailedScan: Scan = {
+  id: 9,
+  status: 'failed',
+  error: 'Connection refused',
+  target: {
+    id: 3,
+    name: 'broken',
+    transport: 'http',
+    command: null,
+    args: [],
+    url: 'http://127.0.0.1:9/mcp',
+    allow_external: false,
+  },
+  created_at: '2026-10-16T15:00:00Z',
+  finished_at: '2026-10-16T15:00:01Z',
+  finding_count: 0,
+}

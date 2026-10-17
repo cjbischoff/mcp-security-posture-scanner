@@ -70,3 +70,18 @@ async def test_same_name_different_command_is_a_different_target(app_db, monkeyp
         await _wait_completed(ac, b["id"])
         resp = await ac.get(f"/api/scans/{a['id']}/diff/{b['id']}")
         assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_failed_scan_report_returns_error_not_409(app_db):
+    async with _client() as ac:
+        scan_id = (await ac.post("/api/scans", json={"target": {
+            "name": "x", "transport": "http", "url": "http://127.0.0.1:9/mcp"}})).json()["id"]
+        assert (await _wait_completed(ac, scan_id))["status"] == "failed"
+        resp = await ac.get(f"/api/scans/{scan_id}/report")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["scan"]["status"] == "failed"
+        assert body["scan"]["error"]
+        assert body["findings"] == []
+        assert body["summary"] == {}

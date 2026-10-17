@@ -66,7 +66,7 @@ async def get_scan_by_id(scan_id: int):
 
 @router.get("/scans/{scan_id}/report")
 async def get_scan_report(scan_id: int):
-    """Findings report for a completed scan."""
+    """Findings report for a finished scan; 409 while pending/running."""
     result = get_report(scan_id)
     if result is None:
         scan = get_scan(scan_id)

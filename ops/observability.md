@@ -159,3 +159,19 @@ where telemetry goes. The OTel SDK reads `OTEL_EXPORTER_OTLP_ENDPOINT` and
 - Grafana Cloud free tier: 14-day retention, 10k active metric series,
   50 GB/month each of logs and traces (checked 2026-10-16,
   https://grafana.com/pricing/).
+
+### Automated setup (used for this project)
+
+`ops/cloud-setup.sh` does steps 1-3 through the Grafana Cloud and Render APIs.
+It reads `GRAFANA_CLOUD_TOKEN` (Cloud access policy token, scopes
+`stacks:read` + `accesspolicies:read/write/delete`), `GRAFANA_SA_TOKEN`,
+`GRAFANA_STACK`, and `RENDER_API_KEY` from `.env`, and prints no secrets.
+It creates a `scanner-otlp` policy (write-only telemetry scopes), makes a new
+OTLP token, tests it with one span, merges the `OTEL_*` vars into each Render
+service (other vars stay), redeploys the running SHA, and pushes the dashboard
+and alert. Running it again rotates the OTLP token and deletes the old one.
+
+`ops/cloud-verify.sh` sends one scan to dev and prod and queries Grafana Cloud.
+Verified 2026-10-17: traces `97a8c6b7…` (dev) and `c0cfc3a7…` (prod) in Tempo,
+`scanner_scans_total` per `deployment_environment` in Prometheus, and Loki
+lines carrying the same trace IDs.

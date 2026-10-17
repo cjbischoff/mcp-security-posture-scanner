@@ -1,0 +1,105 @@
+{
+  "id": "20261017T160850Z-ScanFailureRateHigh-bc7a2c",
+  "alert": {
+    "status": "firing",
+    "alertname": "ScanFailureRateHigh",
+    "service": "scanner-backend",
+    "severity": "page",
+    "starts_at": "2026-10-17T16:08:40Z",
+    "values": {
+      "A": 1.0,
+      "B": 1.0
+    },
+    "summary": "More than half of scans failed in the last 5 minutes"
+  },
+  "started_at": "2026-10-17T16:08:50.066203+00:00",
+  "mode": "runbook",
+  "fallback_reason": null,
+  "steps": [
+    {
+      "tool": "get_alert",
+      "args": {},
+      "result": {
+        "status": "firing",
+        "alertname": "ScanFailureRateHigh",
+        "service": "scanner-backend",
+        "severity": "page",
+        "starts_at": "2026-10-17T16:08:40Z",
+        "values": {
+          "A": 1.0,
+          "B": 1.0
+        },
+        "summary": "More than half of scans failed in the last 5 minutes"
+      },
+      "by": "runbook"
+    },
+    {
+      "tool": "query_metrics",
+      "args": {
+        "name": "scan_failure_ratio"
+      },
+      "result": {
+        "name": "scan_failure_ratio",
+        "values": [
+          1.0
+        ]
+      },
+      "by": "runbook"
+    },
+    {
+      "tool": "get_faults",
+      "args": {},
+      "result": {
+        "active": [
+          "scan-failure"
+        ]
+      },
+      "by": "runbook"
+    },
+    {
+      "tool": "check_health",
+      "args": {},
+      "result": {
+        "ok": true,
+        "http_status": 200,
+        "status": "ok",
+        "version": "dev"
+      },
+      "by": "runbook"
+    },
+    {
+      "tool": "clear_fault",
+      "args": {
+        "name": "scan-failure"
+      },
+      "result": {
+        "cleared": "scan-failure",
+        "http_status": 200
+      },
+      "by": "runbook"
+    }
+  ],
+  "summary": "",
+  "verification": {
+    "health": {
+      "ok": true,
+      "http_status": 200,
+      "status": "ok",
+      "version": "dev"
+    },
+    "active_faults": [],
+    "failure_ratio": [
+      1.0
+    ],
+    "scan": {
+      "id": 13,
+      "status": "completed"
+    },
+    "ok": true
+  },
+  "outcome": "resolved",
+  "finished_at": "2026-10-17T16:09:07.132387+00:00",
+  "issue": {
+    "skipped": "GITHUB_TOKEN or GITHUB_REPOSITORY not set"
+  }
+}

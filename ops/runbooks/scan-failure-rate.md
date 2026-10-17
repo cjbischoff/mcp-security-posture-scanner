@@ -25,22 +25,38 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" http://127.0.0.1:8000/api/admin/fau
 ```
 
 `{"scan_failure": true}` means the failures are injected.
+`{"scan_failure": false}` means they are real: the diagnosis decides the
+action, so do not clear anything.
 
 ## 3. Fix
 
 | Cause | Action |
 |---|---|
 | `scan_failure` fault is on | `curl -XDELETE -H "Authorization: Bearer $ADMIN_TOKEN" http://127.0.0.1:8000/api/admin/faults/scan-failure` |
+| no fault, health ok | Nothing to undo. Scans fail for a real reason (bad targets, broken fixture, dependency). The agent stops here with outcome `needs_human`; a human reads the failed scans' `error` fields |
 | no fault, health fails | Restart: Render deploy hook, or `docker compose restart backend` locally |
 | restart did not help, bad release suspected | Roll back: run the Deploy workflow by hand with an earlier SHA as `tag` |
 
+The agent's `clear_fault` refuses (`rejected: fault ... is not active`)
+when the fault is off, for the runbook and the LLM alike.
+
 ## 4. Verify
 
-Wait about 15 seconds, then:
+Wait about 15 seconds, then all three must hold:
 
 - `/api/health` returns `{"status": "ok", ...}`
 - `GET /api/admin/faults` shows `scan_failure: false`
-- run one scan; it completes
+- one fixture scan completes:
+
+```bash
+curl -XPOST -H 'Content-Type: application/json' \
+  -d '{"target":{"name":"oncall-verify","transport":"stdio","command":"vulnerable-demo"}}' \
+  http://127.0.0.1:8000/api/scans          # note the id
+curl http://127.0.0.1:8000/api/scans/<id>  # repeat until status is completed or failed
+```
+
+The agent does the same (polls up to `VERIFY_SCAN_TIMEOUT`, 60 s) and
+reports `resolved` only if all three pass, else `fix_failed`.
 
 The failure ratio is a 5-minute rate, so it drops a few minutes after the
 fix. Grafana then sends a `resolved` notification.

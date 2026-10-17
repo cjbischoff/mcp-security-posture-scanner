@@ -1,5 +1,14 @@
 # ROADMAP — MCP Security Posture Scanner
 
+> **Status note (2026-10-17):** this file is the original GSD plan, written
+> 2026-10-15 before the code. It is not kept up to date. The live tracker is
+> [GitHub Issues](https://github.com/cjbischoff/mcp-security-posture-scanner/issues)
+> (index: [`docs/task-tracker.md`](../docs/task-tracker.md)). Actual status:
+> Phases 1-4 were built and committed on 2026-10-16 (`9b844f6`, `22fecd4`,
+> `a9610a6`, `5dfab96`, then issues #4-#11); deployment to Render dev and
+> prod is live (#10); Phase 5 (decision model) is not built (#12). Known gaps
+> are open issues #18-#26.
+
 **Granularity:** Standard (4–6 phases)
 **Phase ID convention:** Sequential
 **Active milestone:** 1
@@ -8,10 +17,10 @@
 
 ## Phase Overview
 
-- [ ] **Phase 1: Backend Core + MCP Client + Rule Engine**
-- [ ] **Phase 2: Frontend + Integration**
-- [ ] **Phase 3: Testing + Containerization + CI**
-- [ ] **Phase 4: Security/Audit/DevOps Hardening**
+- [x] **Phase 1: Backend Core + MCP Client + Rule Engine**
+- [x] **Phase 2: Frontend + Integration**
+- [x] **Phase 3: Testing + Containerization + CI**
+- [x] **Phase 4: Security/Audit/DevOps Hardening**
 - [ ] **Phase 5: Decision Model (operator-requested, not graded)**
 
 ---

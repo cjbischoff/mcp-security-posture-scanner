@@ -3,7 +3,7 @@
 ## Project
 
 MCP Security Posture Scanner: a web app that connects to an MCP server as a
-client, lists its tools, resources, and prompts, runs 10 deterministic rules
+client, lists its tools, resources, and prompts, runs 9 deterministic rules (MCP-005 waits for the HTTP transport)
 on that metadata, and returns a findings report and a diff between two scans
 of the same target. Final project for the AI Dev Tools Zoomcamp
 (DataTalksClub, 2026 cohort).

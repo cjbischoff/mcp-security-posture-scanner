@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "MCP Security Posture Scanner",
+    "output": "docs/architecture/mcp-scanner.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "repository": {
+      "url": "git@github.com:cjbischoff/mcp-security-posture-scanner.git",
+      "provider": "github",
+      "link_mode": "local-only",
+      "revision": "5c842482c8166d486ade2969a3d54cef7b1a1a3e"
+    }
+  },
+  "components": [
+    { "id": "user", "type": "external", "label": "Analyst", "sublabel": "browser", "pos": [40, 40], "size": [120, 60] },
+    { "id": "spa", "type": "frontend", "label": "React SPA", "sublabel": "NewScan / Report pages", "pos": [230, 40], "size": [140, 64],
+      "sources": [
+        { "path": "frontend/src/pages/NewScanPage.tsx", "line": 16, "end_line": 36, "label": "submit scan" },
+        { "path": "frontend/src/api/client.ts", "line": 84, "end_line": 94, "label": "API client /api" },
+        { "path": "frontend/src/pages/ScanReportPage.tsx", "line": 14, "end_line": 46, "label": "poll report" }
+      ] },
+    { "id": "api", "type": "backend", "label": "FastAPI router", "sublabel": "/api/scans", "pos": [560, 40], "size": [150, 64], "tag": "409 until done",
+      "sources": [
+        { "path": "backend/app/routers/scans.py", "line": 75, "end_line": 82, "label": "POST /scans" },
+        { "path": "backend/app/routers/scans.py", "line": 100, "end_line": 109, "label": "GET report" }
+      ] },
+    { "id": "rules", "type": "backend", "label": "Rule engine", "sublabel": "8 per scan, 1 diff-only", "pos": [80, 220], "size": [140, 64], "tag": "no LLM",
+      "sources": [
+        { "path": "backend/app/rules/orchestrator.py", "line": 7, "end_line": 31, "label": "run_all_rules" },
+        { "path": "backend/app/rules/registry.py", "line": 15, "end_line": 27, "label": "RULES" }
+      ] },
+    { "id": "service", "type": "backend", "label": "Scan service", "sublabel": "create_scan → async _execute_scan", "pos": [380, 220], "size": [380, 70],
+      "sources": [
+        { "path": "backend/app/services/scan_service.py", "line": 35, "end_line": 62, "label": "create_scan" },
+        { "path": "backend/app/services/scan_service.py", "line": 136, "end_line": 229, "label": "_execute_scan" },
+        { "path": "backend/app/services/scan_service.py", "line": 256, "end_line": 277, "label": "get_report" }
+      ] },
+    { "id": "mcpclient", "type": "backend", "label": "MCP client", "sublabel": "enumerate-only", "pos": [855, 220], "size": [140, 64],
+      "sources": [
+        { "path": "backend/app/mcp_client/client.py", "line": 46, "end_line": 77, "label": "connect stdio/http" },
+        { "path": "backend/app/mcp_client/client.py", "line": 119, "end_line": 142, "label": "enumerate" }
+      ] },
+    { "id": "target", "type": "external", "label": "Target MCP server", "sublabel": "subprocess", "pos": [1110, 220], "size": [130, 64], "tag": "vulnerable-demo",
+      "sources": [
+        { "path": "backend/tests/fixtures/stub_mcp_server.py", "line": 61, "end_line": 150, "label": "stub fixture" },
+        { "path": "backend/app/services/consent.py", "line": 16, "end_line": 20, "label": "FIXTURES" }
+      ] },
+    { "id": "consent", "type": "security", "label": "Consent guard", "sublabel": "localhost / fixture", "pos": [380, 420], "size": [130, 64],
+      "sources": [
+        { "path": "backend/app/services/consent.py", "line": 27, "end_line": 48, "label": "validate_target" },
+        { "path": "backend/app/services/consent.py", "line": 51, "end_line": 89, "label": "resolve_stdio" }
+      ] },
+    { "id": "db", "type": "database", "label": "Database", "sublabel": "Postgres / SQLite", "pos": [530, 420], "size": [130, 64],
+      "sources": [
+        { "path": "backend/app/repositories/scans.py", "line": 107, "end_line": 126, "label": "add_findings" },
+        { "path": "backend/app/database.py", "line": 43, "end_line": 60, "label": "engine" },
+        { "path": "docker-compose.yml", "line": 2, "end_line": 14, "label": "postgres:16" }
+      ] },
+    { "id": "lgtm", "type": "cloud", "label": "Grafana LGTM", "sublabel": "traces, metrics, logs", "pos": [680, 420], "size": [130, 64],
+      "sources": [
+        { "path": "backend/app/observability.py", "line": 64, "end_line": 113, "label": "setup_telemetry" },
+        { "path": "docker-compose.yml", "line": 73, "end_line": 85, "label": "otel-lgtm" }
+      ] },
+    { "id": "oncall", "type": "backend", "label": "On-call agent", "sublabel": "runbook + optional LLM", "pos": [680, 600], "size": [130, 64],
+      "sources": [
+        { "path": "oncall/oncall/app.py", "line": 57, "end_line": 58, "label": "POST /alert" },
+        { "path": "oncall/oncall/agent.py", "line": 102, "end_line": 136, "label": "tool loop" },
+        { "path": "oncall/oncall/tools.py", "line": 245, "end_line": 245, "label": "admin API" }
+      ] }
+  ],
+  "connections": [
+    { "id": "user-spa", "from": "user", "to": "spa", "label": "HTTPS", "variant": "emphasis" },
+    { "id": "spa-api", "from": "spa", "to": "api", "label": "POST /scans · poll report", "variant": "emphasis" },
+    { "id": "api-service", "from": "api", "to": "service", "label": "create_scan / get_report", "variant": "emphasis" },
+    { "id": "service-mcp", "from": "service", "to": "mcpclient", "label": "*/list only", "variant": "emphasis" },
+    { "id": "mcp-target", "from": "mcpclient", "to": "target", "label": "stdio JSON-RPC", "variant": "emphasis" },
+    { "id": "service-rules", "from": "service", "to": "rules", "label": "snapshot → findings", "variant": "emphasis" },
+    { "id": "service-consent", "from": "service", "to": "consent", "label": "gate first", "variant": "security" },
+    { "id": "service-db", "from": "service", "to": "db", "label": "SQL" },
+    { "id": "service-lgtm", "from": "service", "to": "lgtm", "label": "OTLP", "variant": "dashed" },
+    { "id": "lgtm-oncall", "from": "lgtm", "to": "oncall", "label": "alert webhook", "variant": "dashed" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "Primary path", "items": [
+      "POST /api/scans checks consent, stores a pending scan, returns 201",
+      "Background task: connect, list tools/resources/prompts, run rules, store findings",
+      "SPA polls the report every 1.5 s; the API returns 409 until the scan finishes"
+    ] },
+    { "dot": "rose", "title": "Guardrails", "items": [
+      "Public mode runs only bundled fixtures; ALLOW_ARBITRARY_STDIO lifts this locally",
+      "External HTTP URLs need allow_external=true",
+      "Client never sends tools/call; no LLM reads target text"
+    ] },
+    { "dot": "amber", "title": "Known gaps", "items": [
+      "HTTP transport raises \"not yet implemented\", so HTTP scans end FAILED",
+      "MCP-005 exists but is not registered",
+      "allow_external is stored, but no log line records it"
+    ] },
+    { "dot": "slate", "title": "Runtime", "items": [
+      "Compose: db, backend, nginx frontend, oncall, lgtm",
+      "Render: one image, FastAPI serves the SPA from STATIC_DIR",
+      "On-call agent uses the backend admin API with ADMIN_TOKEN"
+    ] }
+  ]
+}

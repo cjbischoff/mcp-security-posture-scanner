@@ -2,6 +2,9 @@
 
 Planned system architecture (Phase 0 — updated as implementation lands).
 
+For the diagram of the code as built, open `architecture/mcp-scanner.html` in
+a browser. Each component in it links to its source lines.
+
 ## Components
 
 - **Frontend** — React + TypeScript (Vite). All backend calls go through one

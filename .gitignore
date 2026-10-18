@@ -30,3 +30,7 @@ coverage/
 ops/incidents/*
 !ops/incidents/.gitkeep
 .env.tmp
+
+# Archify scratch output and local delivery receipts (absolute paths)
+.archify/
+docs/architecture/*.delivery.json

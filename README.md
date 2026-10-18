@@ -41,6 +41,16 @@ There is no small, self-hostable way to check a server first.
 
 ## How it works
 
+[![Architecture: the scan path from browser to target MCP server, with the rule engine, consent guard, database, telemetry, and on-call agent](docs/images/architecture-diagram.png)](docs/architecture/mcp-scanner.html)
+
+**Interactive diagram:** [`docs/architecture/mcp-scanner.html`](docs/architecture/mcp-scanner.html).
+GitHub shows this file as source code. Download it, or clone the repo, and open
+it in a browser. In the browser you can click a component to see the source
+lines it comes from, and read cards about guardrails and known gaps. The
+diagram source is `docs/architecture/mcp-scanner.architecture.json`.
+
+The short version:
+
 ```mermaid
 flowchart LR
     U[You: web UI or curl] -->|POST /api/scans| API[FastAPI backend]
@@ -491,7 +501,8 @@ runbook `ops/runbooks/scan-failure-rate.md`.
 | Alerting | `ops/alerts.md`, `ops/grafana/alerting.yaml`, `scripts/trigger-alert.sh` |
 | On-call agent | `oncall/`, `docs/oncall-agent.md`, `ops/runbooks/`, `ops/incidents/`; Walkthrough 5 |
 
-Other documents: `docs/architecture.md`, `docs/permissions.md`, `docs/decisions/`,
+Other documents: `docs/architecture.md`, `docs/architecture/mcp-scanner.html`
+(interactive architecture diagram), `docs/permissions.md`, `docs/decisions/`,
 `mcp-scanner-project-brief.md` (source of truth and rubric), `.planning/`
 (original GSD plan), `security/` (Semgrep results and custom rule, PR audit log,
 AI tool data policy). The SBOM and Grype results in `security/` were generated

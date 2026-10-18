@@ -26,7 +26,7 @@
         { "path": "backend/app/routers/scans.py", "line": 75, "end_line": 82, "label": "POST /scans" },
         { "path": "backend/app/routers/scans.py", "line": 100, "end_line": 109, "label": "GET report" }
       ] },
-    { "id": "rules", "type": "backend", "label": "Rule engine", "sublabel": "9 deterministic rules", "pos": [80, 220], "size": [140, 64], "tag": "no LLM",
+    { "id": "rules", "type": "backend", "label": "Rule engine", "sublabel": "8 per scan, 1 diff-only", "pos": [80, 220], "size": [140, 64], "tag": "no LLM",
       "sources": [
         { "path": "backend/app/rules/orchestrator.py", "line": 7, "end_line": 31, "label": "run_all_rules" },
         { "path": "backend/app/rules/registry.py", "line": 15, "end_line": 27, "label": "RULES" }
